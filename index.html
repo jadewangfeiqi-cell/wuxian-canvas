@@ -571,8 +571,9 @@ $("modalOk").onclick=function(){var cb=modalCb;$("modal").classList.remove("open
 /* ============ 数据（保存在本机浏览器里，关掉再打开还在） ============ */
 var LS_KEY="wuxian-canvas-v1";
 var DB={accounts:{},session:null};
-function saveDB(){try{localStorage.setItem(LS_KEY,JSON.stringify(DB))}catch(e){}}
-function loadDB(){try{var raw=localStorage.getItem(LS_KEY);if(!raw)return;var d=JSON.parse(raw);if(d&&d.accounts)DB=d}catch(e){}}
+var lastSavedJson="";
+function saveDB(){try{if(DB)DB._savedAt=Date.now();var s=JSON.stringify(DB);localStorage.setItem(LS_KEY,s);lastSavedJson=s}catch(e){}}
+function loadDB(){try{var raw=localStorage.getItem(LS_KEY);if(!raw)return;var d=JSON.parse(raw);if(d&&d.accounts){DB=d;lastSavedJson=raw}}catch(e){}}
 loadDB();
 setInterval(saveDB,3000);
 window.addEventListener("beforeunload",saveDB);
@@ -628,6 +629,22 @@ if(l.name==="雨夜霓虹街道"&&l.kind!=="场景")l.kind="场景";
 });
 saveDB();
 }
+/* 多标签页同步：同一浏览器开两个画布页时，旧页每 3 秒自动保存会盖掉新页的改动（之前锁定两次消失的疑似原因）。
+   监听 storage 事件：只有内容真的变了、且对方保存时间更新，才拉取并重渲染；内容相同只差时间戳时不动作。 */
+window.addEventListener("storage",function(e){
+if(!e||e.key!==LS_KEY||!e.newValue)return;
+try{
+var incoming=JSON.parse(e.newValue);
+if(!incoming||!incoming.accounts)return;
+var a=JSON.parse(JSON.stringify(DB||{}));delete a._savedAt;
+var b=JSON.parse(JSON.stringify(incoming));delete b._savedAt;
+if(JSON.stringify(a)===JSON.stringify(b))return;
+if(!(incoming._savedAt>(DB&&DB._savedAt||0)))return;
+DB=incoming;lastSavedJson=e.newValue;
+fixLockKinds();
+if(typeof renderAll==="function")renderAll();
+}catch(err){}
+});
 function defaultEngines(){return [
 {id:uid("en"),name:"Muse 视频",desc:"站内主引擎：请求单复制后发回聊天生成视频。",suffix:"",on:true},
 {id:uid("en"),name:"Midjourney v7（外部手动）",desc:"外部手动引擎：在 MJ 里粘贴英文提示词出图。",suffix:" --style raw --v 7 --ar 16:9",on:false},
