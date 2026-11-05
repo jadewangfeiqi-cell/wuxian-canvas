@@ -99,6 +99,19 @@ box-shadow:0 14px 34px rgba(0,0,0,.45)}
 .node .nmedia img,.node .nmedia video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
 .node .nmedia .nmedia-empty{display:flex;align-items:center;justify-content:center;aspect-ratio:16/9;color:var(--cream-dim);font-size:12px}
 .node .nmeta{margin-top:8px;font-size:11px;color:var(--gold)}
+.nodetools{position:absolute;z-index:30;display:flex;gap:4px;background:rgba(18,24,18,.94);border:1px solid var(--line);border-radius:999px;padding:5px 6px;box-shadow:0 10px 28px rgba(0,0,0,.45);backdrop-filter:blur(8px)}
+.nodetools button{border:1px solid transparent;background:transparent;color:var(--cream);font-size:12px;padding:5px 9px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.nodetools button:hover{background:rgba(201,164,92,.18);border-color:var(--line)}
+.nodetools button.danger:hover{background:rgba(220,80,80,.2);border-color:#a33}
+.sucai-chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+.sucai-chips button{border:1px solid var(--line);background:transparent;color:var(--cream-dim);font-size:12px;padding:6px 12px;border-radius:999px;cursor:pointer}
+.sucai-chips button.on{background:var(--gold);color:#1c2a1a;border-color:var(--gold);font-weight:700}
+.sucai-item{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:14px;border:1px solid transparent;cursor:pointer;margin-bottom:6px}
+.sucai-item:hover{background:rgba(201,164,92,.12);border-color:var(--line)}
+.sucai-item .thumb{width:52px;height:36px;border-radius:8px;overflow:hidden;background:#000;flex:none;border:1px solid rgba(201,164,92,.3);display:flex;align-items:center;justify-content:center;font-size:16px}
+.sucai-item .thumb img,.sucai-item .thumb video{width:100%;height:100%;object-fit:cover;display:block}
+.sucai-item .t{font-size:13px;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sucai-item .s{font-size:11px;color:var(--cream-dim)}
 .nodelist-item{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:14px;border:1px solid transparent;cursor:pointer;margin-bottom:6px}
 .nodelist-item:hover{background:rgba(201,164,92,.12);border-color:var(--line)}
 .nodelist-item .thumb{width:52px;height:36px;border-radius:8px;overflow:hidden;background:#000;flex:none;border:1px solid rgba(201,164,92,.3);display:flex;align-items:center;justify-content:center;font-size:16px}
@@ -227,6 +240,7 @@ select.canvas-select{max-width:118px}
 <nav class="rail" aria-label="工具栏">
 <button type="button" data-panel="canvases">🗂<span>画布</span></button>
 <button type="button" data-panel="locks">🔒<span>锁定库</span></button>
+<button type="button" data-panel="sucai">📁<span>素材库</span></button>
 <button type="button" data-panel="skills">✦<span>技能库</span></button>
 <button type="button" data-panel="engines">⚙<span>引擎库</span></button>
 <button type="button" data-panel="kb">📚<span>知识库</span></button>
@@ -302,6 +316,22 @@ select.canvas-select{max-width:118px}
 <textarea class="ta" id="lockDescEn" placeholder="English lock description (for MJ / overseas engines)"></textarea>
 <div style="height:10px"></div>
 <button class="btn gold" id="btnAddLock" type="button" style="width:100%">加入锁定库</button>
+</div>
+</section>
+
+<!-- 素材库（照 Liblib 项目素材：按角色/场景/物品/其他分类） -->
+<section class="panel left" id="panel-sucai">
+<header><h2>素材库</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body">
+<p class="kv">锁定的人物、场景、道具和已上传的图片视频都在这里，按分类找，点一下定位到原处。</p>
+<div class="sucai-chips" id="sucaiChips">
+<button data-cat="全部" class="on" type="button">全部</button>
+<button data-cat="角色" type="button">角色</button>
+<button data-cat="场景" type="button">场景</button>
+<button data-cat="物品" type="button">物品</button>
+<button data-cat="其他" type="button">其他</button>
+</div>
+<div id="sucaiGrid"></div>
 </div>
 </section>
 
@@ -567,8 +597,40 @@ row.appendChild(b1);row.appendChild(b2);div.appendChild(row);box.appendChild(div
 });
 }
 
+
+/* ============ 素材库（照 Liblib 项目素材分类） ============ */
+var sucaiFilter="全部";
+function lockCategory(l){
+if(l.kind==="人物"||l.kind==="替身 Stand")return "角色";
+if(l.kind==="场景")return "场景";
+if(l.kind==="道具")return "物品";
+return "其他";
+}
+function renderSucai(){
+var box=$("sucaiGrid");if(!box)return;var cv=curCanvas();if(!cv)return;
+document.querySelectorAll("#sucaiChips button").forEach(function(b){b.classList.toggle("on",b.dataset.cat===sucaiFilter)});
+box.innerHTML="";
+var items=[];
+cv.locks.forEach(function(l){items.push({cat:lockCategory(l),icon:l.kind==="场景"?"🌃":l.kind==="道具"?"📦":"👤",name:l.name,sub:"锁定 · "+l.kind,lock:l})});
+cv.nodes.forEach(function(n){
+if((n.type==="image"||n.type==="video")&&n.media)items.push({cat:"其他",icon:"",name:n.title+" · "+(n.media.name||""),sub:TYPE_LABEL[n.type]+(n.media.w&&n.media.h?" · "+n.media.w+" × "+n.media.h:""),node:n,media:n.media});
+});
+var shown=items.filter(function(it){return sucaiFilter==="全部"||it.cat===sucaiFilter});
+if(!shown.length){box.innerHTML='<p class="empty">这个分类里还没有素材</p>';return}
+shown.forEach(function(it){
+var div=document.createElement("div");div.className="sucai-item";
+var thumb=it.media?(it.media.kind==="video"?'<video src="'+it.media.data+'"></video>':'<img src="'+it.media.data+'">'):it.icon;
+div.innerHTML='<div class="thumb">'+thumb+'</div><div style="min-width:0"><div class="t">'+esc(it.name)+'</div><div class="s">'+esc(it.sub)+'</div></div>';
+div.onclick=function(){
+if(it.node){closePanels();selectNode(it.node.id);var v=view();var r=stage.getBoundingClientRect();v.x=r.width/2-(it.node.x+140)*v.k;v.y=r.height/2-(it.node.y+90)*v.k;applyView();openNodeEditor(it.node)}
+else{openPanel("locks");toast("锁定「"+it.name+"」在锁定库里改，改一次所有镜头一起换")}};
+box.appendChild(div);
+});
+}
+document.querySelectorAll("#sucaiChips button").forEach(function(b){b.onclick=function(){sucaiFilter=b.dataset.cat;renderSucai()}});
+
 /* ============ 面板开关 ============ */
-var PANELS=["canvases","node","locks","skills","engines","kb","block","sheet","activity","order"];
+var PANELS=["canvases","node","locks","sucai","skills","engines","kb","block","sheet","activity","order"];
 function closePanels(){PANELS.forEach(function(p){var el=$("panel-"+p);if(el)el.classList.remove("open")});
 document.querySelectorAll(".rail button").forEach(function(b){b.classList.remove("on")})}
 function openPanel(name){
@@ -577,7 +639,7 @@ closePanels();$("feiPanel").classList.remove("open");
 if(was)return;
 var el=$("panel-"+name);if(el)el.classList.add("open");
 document.querySelectorAll(".rail button").forEach(function(b){b.classList.toggle("on",b.dataset.panel===name)});
-if(name==="canvases")renderCanvasList();if(name==="locks")renderLocks();if(name==="skills")renderSkills();
+if(name==="canvases")renderCanvasList();if(name==="locks")renderLocks();if(name==="sucai")renderSucai();if(name==="skills")renderSkills();
 if(name==="engines")renderEngines();if(name==="kb")renderKb();if(name==="block")renderBlock();
 if(name==="sheet")renderSheet();if(name==="activity")renderActivity();if(name==="order")renderOrder();
 }
@@ -635,7 +697,7 @@ cv.nodes.forEach(function(n){
 var el=document.createElement("div");el.className="node"+(selNode===n.id?" sel":"");el.dataset.id=n.id;positionNode(el,n);
 var inner='<div class="ports"><div class="port in" data-port="in"></div><div class="port out" data-port="out"></div></div>'
 +'<div class="ntype">'+TYPE_LABEL[n.type]+(n.type==="shot"?" · 第 "+n.no+" 镜 · 10 秒":"")+(n.type==="image"&&n.shotNo?" · 第 "+n.shotNo+" 镜分镜图":"")+'</div>'
-+"<h3>"+esc(n.title)+"</h3>"+mediaHTML(n)+"<p>"+esc(nodeSummary(n))+"</p>";
++"<h3>"+esc(n.title)+"</h3>"+mediaHTML(n)+((n.type==="image"||n.type==="video")?dimLine(n):"<p>"+esc(nodeSummary(n))+"</p>");
 if(n.refs&&n.refs.length)inner+='<div class="nmeta">🔗 参考：'+esc(n.refs.join("、"))+"</div>";
 if(n.lastEditor)inner+='<div class="editor">✎ '+esc(n.lastEditor)+" 最近修改</div>";
 inner+='<div class="nrow">';
@@ -658,9 +720,31 @@ b.addEventListener("click",function(e){e.stopPropagation();nodeAction(n,b.datase
 });
 nodesEl.appendChild(el);
 });
-renderNodeList();drawEdges();
+renderNodeTools();renderNodeList();drawEdges();
 }
-function selectNode(id){selNode=id;document.querySelectorAll(".node").forEach(function(el){el.classList.toggle("sel",el.dataset.id===id)});drawEdges()}
+function dimLine(n){
+if(n.media)return '<div class="nmeta">'+esc(n.media.name||"")+(n.media.w&&n.media.h?" · "+n.media.w+" × "+n.media.h:"")+"</div>";
+return '<div class="nmeta">未上传素材 · 点编辑上传</div>';
+}
+function deleteNodeById(id){
+var cv=curCanvas();cv.nodes=cv.nodes.filter(function(x){return x.id!==id});cv.edges=cv.edges.filter(function(e){return e.from!==id&&e.to!==id});
+if(selNode===id)selNode=null;saveDB();renderNodes();toast("节点已删除");
+}
+var replaceTargetId=null;
+function renderNodeTools(){
+document.querySelectorAll(".nodetools").forEach(function(t){t.remove()});
+if(!selNode)return;var n=findNode(selNode);if(!n)return;
+var bar=document.createElement("div");bar.className="nodetools";
+bar.style.left=n.x+"px";bar.style.top=Math.max(0,n.y-48)+"px";
+var btns=[];
+btns.push(['✎ 编辑',function(){openNodeEditor(n)}]);
+if(n.type==="image"||n.type==="video")btns.push(['📎 替换素材',function(){replaceTargetId=n.id;$("mediaFile").click()}]);
+if(n.media){btns.push(['🔍 预览',function(){window.open(n.media.data,"_blank")}]);btns.push(['⬇ 下载',function(){var a=document.createElement("a");a.href=n.media.data;a.download=n.media.name||"素材";document.body.appendChild(a);a.click();a.remove()}]);}
+btns.push(['🗑 删除',function(){deleteNodeById(n.id)}]);
+btns.forEach(function(b){var btn=document.createElement("button");btn.type="button";btn.textContent=b[0];if(b[0].indexOf("删除")===0)btn.className="danger";btn.onclick=function(e){e.stopPropagation();b[1]()};bar.appendChild(btn)});
+nodesEl.appendChild(bar);
+}
+function selectNode(id){selNode=id;document.querySelectorAll(".node").forEach(function(el){el.classList.toggle("sel",el.dataset.id===id)});renderNodeTools();drawEdges()}
 function portClick(id,port){
 var cv=curCanvas();
 if(!linkFrom){linkFrom=id;toast("已选起点，再点另一个节点的圆点完成连线");drawEdges();return}
@@ -734,7 +818,7 @@ if(node){attachMedia(node,file,function(){toast("素材已上传到节点 ✓"+(
 else{var n=addNode(file.type.indexOf("video")===0?"video":"image");attachMedia(n,file,function(){toast("素材节点已创建 ✓"+(n.mediaTooBig?"（视频较大，关掉页面后可能不在）":""))})}
 }
 $("btnUploadMedia").onclick=function(){$("mediaFile").click()};
-$("mediaFile").addEventListener("change",function(){handleMediaFile(this.files[0]);this.value=""});
+$("mediaFile").addEventListener("change",function(){var f=this.files[0];this.value="";if(replaceTargetId){var t=findNode(replaceTargetId);replaceTargetId=null;if(t)handleMediaFile(f,t);return}handleMediaFile(f)});
 /* 整理画布（照 Liblib：一行排开、留白大、再按内容缩放适配） */
 function tidyLayout(){
 var cv=curCanvas();if(!cv||!cv.nodes.length)return;
