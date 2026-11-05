@@ -585,6 +585,8 @@ function defaultSkills(){return [
 {id:uid("sk"),name:"AI 高燃打斗（Seedance）",desc:"攻防逻辑清晰、节奏呼吸、慢-快-慢、打击特效反馈，适配 Seedance 2.0。",on:false},
 {id:uid("sk"),name:"电影感打斗图（MJ）",desc:"动作冻结在撞击前一瞬，低机位近景，地面开裂、碎屑雨水飞溅，湿皮肤湿衣。",on:false},
 {id:uid("sk"),name:"场景一致性模拟",desc:"先定俯视站位图再生成，人物左右站位、距离、镜头方向全程锁定不漂移。",on:false},
+{id:uid("sk"),name:"批量视频生成插件",desc:"一句话故事拆成 N 个 10 秒镜头：风格锁逐字拼进每镜、尾帧接力、批量抽卡选片；先出规划确认再生成，单轮上限 6 条。",on:false},
+{id:uid("sk"),name:"AI 视频一致性",desc:"先锁人物/场景/配件清单再生成：小步分段出片，逐帧核对左右站位、视线与配件，缺锁不算完工。",on:false},
 {id:uid("sk"),name:"知识库精读出词",desc:"先匹配知识库、确认后定向精读，精读要点拼进提示词再出词。",on:true},
 {id:uid("sk"),name:"导演色卡 · 冷调与大地 001–080",desc:"80 位导演冷调与大地影调：查索引按导演名取风格，MJ/GPT-Image/视频/SD 四份提示词加影调色卡，整段复制只改关键词。",on:false},
 {id:uid("sk"),name:"导演色卡 · 浓彩与梦幻 081–140",desc:"60 位导演浓彩与梦幻影调：查索引按导演名取风格，MJ/GPT-Image/视频/SD 四份提示词加影调色卡，整段复制只改关键词。",on:false},
@@ -593,7 +595,8 @@ function defaultSkills(){return [
 {id:uid("sk"),name:"Hell Grind · LIRA",desc:"生图提示词优化：Higgsfield Soul、Nano Banana Pro、Seedream、GPT Image。",on:false},
 {id:uid("sk"),name:"Hell Grind · ACTING",desc:"Seedance 角色表演系统：表演是压力下的行为，以动机、阻碍与肢体动作写提示词。",on:false},
 {id:uid("sk"),name:"走位 · Camera Blocking",desc:"多人物镜头走位与站位锁定：俯视图推理加文字锚点加正面示意图，防串色三层架构；示意图本身不保证移动走位。",on:false},
-{id:uid("sk"),name:"编剧全流程 · 总控",desc:"编剧流水线总控：概念锚定、角色圣经、世界观、分场大纲、深度融合、压力测试，六道工序按顺序调度。",on:false}
+{id:uid("sk"),name:"编剧全流程 · 总控",desc:"编剧流水线总控：概念锚定、角色圣经、世界观、分场大纲、深度融合、压力测试，六道工序按顺序调度。",on:false},
+{id:uid("sk"),name:"永续仓位截图解读",desc:"只读最新仓位截图：按截图字段算实际杠杆、盈亏与强平价，只讲数字和算术，不下单、不改单。",on:false}
 ]}
 /* 老画布自动补齐：新版内置技能按名字补进已有画布（已有同名不重复），登录/自动登录时跑一次 */
 function ensureBuiltInSkills(){
@@ -606,6 +609,20 @@ if(!cv.skills)cv.skills=[];
 built.forEach(function(b){
 var has=cv.skills.some(function(s){return s.name===b.name});
 if(!has)cv.skills.push({id:uid("sk"),name:b.name,desc:b.desc,on:b.on});
+});
+});
+});
+saveDB();
+}
+/* 数据修复：雨夜霓虹街道的 kind 曾被误存为“人物”，登录时自动纠正为“场景”（幂等，多跑无害） */
+function fixLockKinds(){
+if(!DB||!DB.accounts)return;
+Object.keys(DB.accounts).forEach(function(name){
+var d=DB.accounts[name].data;if(!d||!d.canvases)return;
+d.canvases.forEach(function(cv){
+if(!cv.locks)return;
+cv.locks.forEach(function(l){
+if(l.name==="雨夜霓虹街道"&&l.kind!=="场景")l.kind="场景";
 });
 });
 });
@@ -662,6 +679,7 @@ $("btnLogout").onclick=function(){DB.session=null;saveDB();$("app").style.displa
 
 function enterApp(){
 ensureBuiltInSkills();
+fixLockKinds();
 $("authGate").style.display="none";$("app").style.display="flex";
 $("userLabel").textContent=DB.session;$("avatarDot").textContent=(DB.session||"?").slice(0,1).toUpperCase();
 refreshCanvasSelect();renderAll();
