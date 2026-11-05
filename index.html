@@ -585,8 +585,32 @@ function defaultSkills(){return [
 {id:uid("sk"),name:"AI 高燃打斗（Seedance）",desc:"攻防逻辑清晰、节奏呼吸、慢-快-慢、打击特效反馈，适配 Seedance 2.0。",on:false},
 {id:uid("sk"),name:"电影感打斗图（MJ）",desc:"动作冻结在撞击前一瞬，低机位近景，地面开裂、碎屑雨水飞溅，湿皮肤湿衣。",on:false},
 {id:uid("sk"),name:"场景一致性模拟",desc:"先定俯视站位图再生成，人物左右站位、距离、镜头方向全程锁定不漂移。",on:false},
-{id:uid("sk"),name:"知识库精读出词",desc:"先匹配知识库、确认后定向精读，精读要点拼进提示词再出词。",on:true}
+{id:uid("sk"),name:"知识库精读出词",desc:"先匹配知识库、确认后定向精读，精读要点拼进提示词再出词。",on:true},
+{id:uid("sk"),name:"导演色卡 · 冷调与大地 001–080",desc:"80 位导演冷调与大地影调：查索引按导演名取风格，MJ/GPT-Image/视频/SD 四份提示词加影调色卡，整段复制只改关键词。",on:false},
+{id:uid("sk"),name:"导演色卡 · 浓彩与梦幻 081–140",desc:"60 位导演浓彩与梦幻影调：查索引按导演名取风格，MJ/GPT-Image/视频/SD 四份提示词加影调色卡，整段复制只改关键词。",on:false},
+{id:uid("sk"),name:"导演色卡 · 动画柔光东方 141–200",desc:"60 位导演动画/柔光/东方影调：查索引按导演名取风格，MJ/GPT-Image/视频/SD 四份提示词加影调色卡，整段复制只改关键词。",on:false},
+{id:uid("sk"),name:"Hell Grind · CINEDANCE V4",desc:"Seedance 2.0 / Higgsfield 电影级视频提示词导演：运镜、走位、光学、物理与连续性校验。",on:false},
+{id:uid("sk"),name:"Hell Grind · LIRA",desc:"生图提示词优化：Higgsfield Soul、Nano Banana Pro、Seedream、GPT Image。",on:false},
+{id:uid("sk"),name:"Hell Grind · ACTING",desc:"Seedance 角色表演系统：表演是压力下的行为，以动机、阻碍与肢体动作写提示词。",on:false},
+{id:uid("sk"),name:"走位 · Camera Blocking",desc:"多人物镜头走位与站位锁定：俯视图推理加文字锚点加正面示意图，防串色三层架构；示意图本身不保证移动走位。",on:false},
+{id:uid("sk"),name:"编剧全流程 · 总控",desc:"编剧流水线总控：概念锚定、角色圣经、世界观、分场大纲、深度融合、压力测试，六道工序按顺序调度。",on:false}
 ]}
+/* 老画布自动补齐：新版内置技能按名字补进已有画布（已有同名不重复），登录/自动登录时跑一次 */
+function ensureBuiltInSkills(){
+if(!DB||!DB.accounts)return;
+var built=defaultSkills();
+Object.keys(DB.accounts).forEach(function(name){
+var d=DB.accounts[name].data;if(!d||!d.canvases)return;
+d.canvases.forEach(function(cv){
+if(!cv.skills)cv.skills=[];
+built.forEach(function(b){
+var has=cv.skills.some(function(s){return s.name===b.name});
+if(!has)cv.skills.push({id:uid("sk"),name:b.name,desc:b.desc,on:b.on});
+});
+});
+});
+saveDB();
+}
 function defaultEngines(){return [
 {id:uid("en"),name:"Muse 视频",desc:"站内主引擎：请求单复制后发回聊天生成视频。",suffix:"",on:true},
 {id:uid("en"),name:"Midjourney v7（外部手动）",desc:"外部手动引擎：在 MJ 里粘贴英文提示词出图。",suffix:" --style raw --v 7 --ar 16:9",on:false},
@@ -637,6 +661,7 @@ $("authPass").addEventListener("keydown",function(e){if(e.key==="Enter")$("authG
 $("btnLogout").onclick=function(){DB.session=null;saveDB();$("app").style.display="none";$("authGate").style.display="flex";setAuthMode("login")};
 
 function enterApp(){
+ensureBuiltInSkills();
 $("authGate").style.display="none";$("app").style.display="flex";
 $("userLabel").textContent=DB.session;$("avatarDot").textContent=(DB.session||"?").slice(0,1).toUpperCase();
 refreshCanvasSelect();renderAll();
