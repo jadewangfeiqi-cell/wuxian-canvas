@@ -189,7 +189,7 @@ select.canvas-select{max-width:118px}
 <div class="field"><label for="authPass">密码（至少 4 位）</label><input id="authPass" type="password" autocomplete="current-password" placeholder="输入密码"></div>
 <button class="btn gold auth-go" id="authGo" type="button">登录进入画布</button>
 <div class="auth-msg" id="authMsg"></div>
-<p class="auth-note">每个账号的画布互相分开；你和朋友各自注册、各自工作。<br>密码只在本页面内校验保存为哈希，不明文显示。</p>
+<p class="auth-note">每个账号的画布互相分开；你和朋友各自注册、各自工作。<br>密码只在本页面内校验保存为哈希，不明文显示。<br>账号保存在你这台设备的浏览器里，关掉页面再打开还在；换设备或清浏览器数据后要重新注册。</p>
 </div>
 </div>
 
@@ -437,8 +437,14 @@ function showModal(title,bodyHTML,cb){$("modalTitle").textContent=title;$("modal
 $("modalCancel").onclick=function(){$("modal").classList.remove("open");modalCb=null};
 $("modalOk").onclick=function(){var cb=modalCb;$("modal").classList.remove("open");modalCb=null;if(cb)cb()};
 
-/* ============ 数据（本次打开期间保存在页面内） ============ */
+/* ============ 数据（保存在本机浏览器里，关掉再打开还在） ============ */
+var LS_KEY="wuxian-canvas-v1";
 var DB={accounts:{},session:null};
+function saveDB(){try{localStorage.setItem(LS_KEY,JSON.stringify(DB))}catch(e){}}
+function loadDB(){try{var raw=localStorage.getItem(LS_KEY);if(!raw)return;var d=JSON.parse(raw);if(d&&d.accounts)DB=d}catch(e){}}
+loadDB();
+setInterval(saveDB,3000);
+window.addEventListener("beforeunload",saveDB);
 var TYPE_LABEL={story:"故事",shot:"镜头",image:"图片",video:"视频",block:"白模",text:"文本"};
 var NEG_CN="否定（中文）：不要变形的手指，不要多余人物，不要水印，不要文字乱码，不要脸部崩坏，不要廉价塑料感";
 var NEG_EN="Negative: deformed hands, extra people, watermark, garbled text, distorted face, cheap plastic look";
@@ -488,16 +494,16 @@ if(!pw||pw.length<4){$("authMsg").textContent="密码至少 4 位";return}
 if(authMode==="reg"){
 if(DB.accounts[name]){$("authMsg").textContent="这个账号名已经被注册了，换一个或直接登录";return}
 DB.accounts[name]={pw:hashPw(pw),data:seedUserData()};
-DB.session=name;enterApp();toast("注册成功，欢迎来到你的画布 ✓");
+DB.session=name;saveDB();enterApp();toast("注册成功，欢迎来到你的画布 ✓");
 }else{
 var acc=DB.accounts[name];
 if(!acc){$("authMsg").textContent="还没有这个账号，点上面「注册新账号」先注册";return}
 if(acc.pw!==hashPw(pw)){$("authMsg").textContent="密码不对，再试一次";return}
-DB.session=name;enterApp();toast("登录成功 ✓");
+DB.session=name;saveDB();enterApp();toast("登录成功 ✓");
 }
 };
 $("authPass").addEventListener("keydown",function(e){if(e.key==="Enter")$("authGo").click()});
-$("btnLogout").onclick=function(){DB.session=null;$("app").style.display="none";$("authGate").style.display="flex";setAuthMode("login")};
+$("btnLogout").onclick=function(){DB.session=null;saveDB();$("app").style.display="none";$("authGate").style.display="flex";setAuthMode("login")};
 
 function enterApp(){
 $("authGate").style.display="none";$("app").style.display="flex";
@@ -1098,7 +1104,7 @@ $("feiTab").onclick=openFei;$("btnFeiTop").onclick=openFei;$("feiClose").onclick
 
 /* ============ 总渲染 ============ */
 function renderAll(){applyView();renderNodes();renderCanvasList()}
-setAuthMode("login");
+if(DB.session&&DB.accounts[DB.session]){enterApp()}else{setAuthMode("login")}
 </script>
 </body>
 </html>
