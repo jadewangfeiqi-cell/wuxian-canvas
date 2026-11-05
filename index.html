@@ -881,7 +881,7 @@ cv.nodes.forEach(function(n){
 var el=document.createElement("div");el.className="node"+(selNode===n.id?" sel":"");el.dataset.id=n.id;positionNode(el,n);
 var inner='<div class="ports"><div class="port in" data-port="in"></div><div class="port out" data-port="out"></div></div>'
 +'<div class="ntype">'+TYPE_LABEL[n.type]+(n.type==="shot"?" · 第 "+n.no+" 镜 · 10 秒":"")+(n.type==="image"&&n.shotNo?" · 第 "+n.shotNo+" 镜分镜图":"")+'</div>'
-+"<h3>"+esc(n.title)+"</h3>"+mediaHTML(n)+((n.type==="image"||n.type==="video")?dimLine(n):"<p>"+esc(nodeSummary(n))+"</p>")+paramHTML(n);
++"<h3>"+esc(n.title)+"</h3>"+mediaHTML(n)+((n.type==="image"||n.type==="video")?dimLine(n):"<p>"+esc(nodeSummary(n))+"</p>")+paramHTML(n)+genStatusHTML(n);
 if(n.refs&&n.refs.length)inner+='<div class="nmeta">🔗 参考：'+esc(n.refs.join("、"))+"</div>";
 if(n.lastEditor)inner+='<div class="editor">✎ '+esc(n.lastEditor)+" 最近修改</div>";
 inner+='<div class="nrow">';
@@ -916,6 +916,10 @@ if(selNode===id)selNode=null;saveDB();renderNodes();toast("节点已删除");
 }
 var replaceTargetId=null;
 
+function genStatusHTML(n){
+if(!n.genStatus)return "";
+return '<div class="nmeta" style="color:'+(n.genError?"#ff9d9d":"#9fd8b4")+'">'+esc(n.genStatus)+"</div>";
+}
 function paramHTML(n){
 if(n.type==="video")return '<div class="nparams"><span>清晰度</span><button data-act="clar480" class="'+(n.clarity!=="720P"?"on":"")+'">480P</button><button data-act="clar720" class="'+(n.clarity==="720P"?"on":"")+'">720P</button><span>时长</span><button data-act="dur5" class="'+(n.duration==="5秒"?"on":"")+'">5秒</button><button data-act="dur10" class="'+(n.duration!=="5秒"?"on":"")+'">10秒</button></div>';
 if(n.type==="image")return '<div class="nparams"><span>比例</span><button data-act="asp169" class="'+(n.aspect!=="9:16"&&n.aspect!=="1:1"?"on":"")+'">16:9</button><button data-act="asp916" class="'+(n.aspect==="9:16"?"on":"")+'">9:16</button><button data-act="asp11" class="'+(n.aspect==="1:1"?"on":"")+'">1:1</button></div>';
@@ -1192,12 +1196,118 @@ function promptBlockFor(n){
 if(n.type==="shot"){var p=buildShotPrompt(n);return "第 "+n.no+" 镜\n中文提示词：\n"+p.cn+"\nEnglish prompt:\n"+p.en+"\n"+p.negCn+"\n"+p.negEn}
 return "「"+n.title+"」\n中文提示词：\n"+(n.promptCn||"")+"\nEnglish prompt:\n"+(n.promptEn||"")+"\n"+NEG_CN+"\n"+NEG_EN+(n.refs&&n.refs.length?"\n参考图清单 / References: "+n.refs.join("、"):"");
 }
+/* ============ 后端生成接线（Minimax，经 Cloudflare Worker 代理） ============ */
+var API_BASE="https://wuxian.jadewangfeiqi.workers.dev/api";
+function genPromptText(n){
+if(n.type==="shot"){var p=buildShotPrompt(n);return p.cn||p.en||""}
+return (n.promptCn||"")||(n.promptEn||"");
+}
+function genAspect(n){
+if(n.aspect==="9:16")return "9:16";
+if(n.aspect==="1:1")return "1:1";
+return "16:9";
+}
+function setGenStatus(n,msg,isErr){
+n.genStatus=msg;n.genError=!!isErr;saveDB();renderNodes();
+}
+function apiFailFallback(n,msg){
+/* 后端不可用时退回老流程：提示词进请求单 + 复制，方便发给 Muse 手动生成 */
+var cv=curCanvas();var txt=promptBlockFor(n);
+cv.sheet.unshift({id:uid("sh"),title:n.title,body:txt,t:nowStr(),who:DB.session});
+logAct(cv,"生成失败已退回请求单："+n.title+"（"+msg+"）");
+copyText(txt,"后端暂时不可用（"+msg+"），提示词已复制，可发给我手动生成");
+renderSheet();renderActivity();
+}
+function finishImage(n,mm){
+var imgs=(mm&&mm.data&&mm.data.images)||(mm&&mm.images)||[];
+var first=imgs[0]||"";
+var url="";
+if(typeof first==="string"){
+if(first.indexOf("http")===0)url=first;
+else if(first.length>100)url="data:image/jpeg;base64,"+first;
+}
+n.genBusy=false;
+if(!url){setGenStatus(n,"生成失败：后端没返回图片",true);apiFailFallback(n,"后端没返回图片");return}
+n.media={kind:"image",name:"AI 生成 · "+n.title,data:url,w:0,h:0};
+n.genTaskId=null;
+setGenStatus(n,"已生成 ✓");
+logAct(curCanvas(),"AI 生成图片："+n.title);
+saveDB();renderNodes();renderHistory();
+toast("图片生成好了，已存进节点 ✓");
+}
+var pollTimers={};
+function pollVideo(n){
+if(!n.genTaskId||pollTimers[n.id])return;
+setGenStatus(n,"视频生成中…（排队加渲染要几分钟）");
+var tries=0;
+pollTimers[n.id]=setInterval(function(){
+tries++;
+if(tries>150){clearInterval(pollTimers[n.id]);delete pollTimers[n.id];setGenStatus(n,"生成超时：任务还在跑，稍后点「生成这一条」续查",true);return}
+fetch(API_BASE+"/generate/video/"+encodeURIComponent(n.genTaskId))
+.then(function(r){return r.json()})
+.then(function(w){
+if(!w.ok){clearInterval(pollTimers[n.id]);delete pollTimers[n.id];setGenStatus(n,"生成失败："+(w.error||"查询失败"),true);return}
+var d=w.data||{};
+var st=(w.status||d.status||"")+"";
+if(st==="Success"||st==="success"){
+clearInterval(pollTimers[n.id]);delete pollTimers[n.id];
+var url=w.download_url||d.download_url||(d.file&&d.file.download_url)||"";
+if(!url){setGenStatus(n,"视频已完成，但没拿到下载链接（file_id "+(d.file_id||w.file_id||"")+"）",true);return}
+n.media={kind:"video",name:"AI 生成 · "+n.title,data:url,w:0,h:0};
+n.genTaskId=null;
+setGenStatus(n,"已生成 ✓");
+logAct(curCanvas(),"AI 生成视频："+n.title);
+saveDB();renderNodes();renderHistory();
+toast("视频生成好了，已存进节点 ✓");
+}else if(st==="Fail"||st==="fail"||st==="Failed"){
+clearInterval(pollTimers[n.id]);delete pollTimers[n.id];
+setGenStatus(n,"生成失败："+(d.message||d.error||"任务失败"),true);
+}else{
+setGenStatus(n,"视频生成中…（已等 "+(tries*5)+" 秒）");
+}
+})
+.catch(function(){/* 网络抖动就下一轮再查 */});
+},5000);
+}
 function genOne(n){
+/* 非图片/视频节点（比如在编辑器里点的镜头节点）走老流程：进请求单 + 复制 */
+if(n.type!=="image"&&n.type!=="video"){
 var cv=curCanvas();var txt=promptBlockFor(n);
 cv.sheet.unshift({id:uid("sh"),title:n.title,body:txt,t:nowStr(),who:DB.session});
 logAct(cv,"单个生成："+n.title+" 已加入请求单");
 copyText(txt,"这一"+(n.type==="video"?"条":"张")+"的双语提示词已复制，并加入请求单 ✓");
 renderSheet();renderActivity();
+return;
+}
+var prompt=genPromptText(n);
+if(!prompt){toast("先在编辑里写提示词");return}
+if(n.genBusy)return;
+/* 视频断点续查：已有任务 id 且没结果，先续查不新建 */
+if(n.type==="video"&&n.genTaskId&&!n.media){pollVideo(n);return}
+n.genBusy=true;
+setGenStatus(n,"生成中…");
+var url=API_BASE+(n.type==="image"?"/generate/image":"/generate/video");
+var body={prompt:prompt};
+if(n.type==="image"){body.aspect_ratio=genAspect(n)}
+else{body.duration=(n.duration==="5秒"?5:10);body.ratio="16:9";body.resolution=(n.clarity==="720P"?"1080P":"768P")}
+fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+.then(function(r){return r.json().then(function(d){return {status:r.status,data:d}})})
+.then(function(w){
+if(!w.data.ok){
+n.genBusy=false;
+var msg=w.data.error==="minimax_key_not_configured"?"Minimax Key 还没配好":(w.data.error||("后端返回 "+w.status));
+setGenStatus(n,"生成失败："+msg,true);
+apiFailFallback(n,msg);
+return;
+}
+if(n.type==="image"){finishImage(n,w.data.data)}
+else{n.genTaskId=w.data.task_id;n.genBusy=false;setGenStatus(n,"视频排队中…任务 "+n.genTaskId);saveDB();pollVideo(n)}
+})
+.catch(function(){
+n.genBusy=false;
+setGenStatus(n,"生成失败：连不上后端（workers.dev 在国内可能打不开）",true);
+apiFailFallback(n,"连不上后端");
+});
 }
 $("btnGenAll").onclick=function(){
 var cv=curCanvas();var imgs=cv.nodes.filter(function(n){return n.type==="image"}).sort(function(a,b){return (a.shotNo||99)-(b.shotNo||99)});
