@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:,">
+<title>无限画布 · 网站版</title>
+<style>
+:root{
+--green-950:#071a12; --green-900:#0a2418; --green-800:#0e2f1f; --green-700:#14402a; --green-600:#1b5638;
+--gold:#c9a45c; --gold-2:#e8cf8f; --cream:#f3ecd9; --cream-dim:#cfc6ab; --ink:#0a1f14;
+--glass:rgba(10,36,24,.72); --glass-2:rgba(14,47,31,.62); --line:rgba(201,164,92,.35);
+--radius:26px; --radius-s:18px;
+--font:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Source Han Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;
+--font-round:"PingFang SC","Yuanti SC","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;font-family:var(--font);background:var(--green-950);color:var(--cream);overflow:hidden;letter-spacing:.02em;line-height:1.55}
+button{font-family:inherit;cursor:pointer}
+input,textarea,select{font-family:inherit}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:rgba(201,164,92,.4);border-radius:99px}::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- 登录 ---------- */
+#authGate{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:18px;
+background:
+radial-gradient(900px 500px at 15% 0%,rgba(201,164,92,.16),transparent 60%),
+linear-gradient(135deg,#06150e 0%,#0e2f1f 45%,#071a12 100%);}
+#authGate::before{content:"";position:absolute;inset:0;opacity:.10;pointer-events:none;
+background-image:radial-gradient(circle at 12px 12px,transparent 9px,rgba(201,164,92,.9) 9.5px,transparent 10.5px),radial-gradient(circle at 36px 36px,transparent 9px,rgba(201,164,92,.7) 9.5px,transparent 10.5px);
+background-size:48px 48px;}
+.auth-card{position:relative;width:min(420px,100%);background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+border:1px solid var(--line);border-radius:32px;padding:30px 28px 24px;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.auth-card h1{font-family:var(--font-round);font-size:30px;margin:0 0 4px;letter-spacing:.06em;color:var(--gold-2)}
+.auth-card.sub{color:var(--cream-dim);font-size:14px;margin:0 0 20px}
+.auth-tabs{display:flex;gap:8px;margin-bottom:18px}
+.auth-tabs button{flex:1;padding:11px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--cream);font-size:15px}
+.auth-tabs button.on{background:linear-gradient(135deg,var(--gold),#a5823f);color:#1c1503;font-weight:700;border-color:transparent}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;color:var(--cream-dim);margin-bottom:6px}
+.field input{width:100%;padding:13px 16px;border-radius:16px;border:1px solid var(--line);background:rgba(0,0,0,.28);color:var(--cream);font-size:16px;outline:none}
+.field input:focus{border-color:var(--gold)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 18px;border-radius:99px;border:1px solid var(--line);
+background:var(--glass-2);color:var(--cream);font-size:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform.12s,background.12s}
+.btn:hover{background:rgba(27,86,56,.75)}
+.btn:active{transform:scale(.97)}
+.btn.gold{background:linear-gradient(135deg,#e0bd72,#b08a3e);color:#201703;border-color:transparent;font-weight:700}
+.btn.small{padding:7px 13px;font-size:13px}
+.btn.danger{border-color:rgba(230,120,100,.5);color:#f0a894}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.auth-go{width:100%;padding:14px;font-size:16px;margin-top:4px}
+.auth-msg{min-height:22px;font-size:13px;color:#f0b48f;margin-top:10px;text-align:center}
+.auth-note{font-size:12px;color:var(--cream-dim);text-align:center;margin-top:8px}
+
+/* ---------- 主框架 ---------- */
+#app{display:none;height:100dvh;flex-direction:column}
+header.topbar{display:flex;align-items:center;gap:8px;padding:8px 12px;flex-wrap:wrap;z-index:60;position:relative;
+background:linear-gradient(120deg,rgba(10,36,24,.85),rgba(20,64,42,.78));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+border-bottom:1px solid var(--line)}
+.brand{font-family:var(--font-round);font-weight:800;font-size:18px;color:var(--gold-2);letter-spacing:.08em;white-space:nowrap}
+.topbar.group{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.topbar.spacer{flex:1}
+.user-chip{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--cream-dim);white-space:nowrap}
+.avatar-dot{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#7d5f24);color:#1c1503;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+select.canvas-select{padding:9px 12px;border-radius:99px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:var(--cream);font-size:14px;max-width:170px}
+
+.main{flex:1;display:flex;min-height:0;position:relative}
+/* 左侧工具栏 */
+.rail{width:64px;flex:none;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 6px;z-index:50;
+background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-right:1px solid var(--line);border-radius:0 30px 30px 0}
+.rail button{width:48px;height:48px;border-radius:18px;border:1px solid transparent;background:transparent;color:var(--cream);font-size:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.rail button span{font-size:9px;color:var(--cream-dim)}
+.rail button:hover,.rail button.on{background:rgba(201,164,92,.16);border-color:var(--line)}
+.rail button.on span{color:var(--gold-2)}
+
+/* 画布 */
+#stageWrap{flex:1;position:relative;overflow:hidden;min-width:0}
+#stage{position:absolute;inset:0;cursor:grab;touch-action:none;
+background:
+radial-gradient(1000px 600px at 80% -10%,rgba(201,164,92,.10),transparent 55%),
+linear-gradient(140deg,#0d2c1c 0%,#0a2418 45%,#06170f 100%);}
+#stage::before{content:"";position:absolute;inset:0;opacity:.07;pointer-events:none;
+background-image:radial-gradient(circle at 12px 12px,transparent 9px,#c9a45c 9.5px,transparent 10.5px),radial-gradient(circle at 36px 36px,transparent 9px,#c9a45c 9.5px,transparent 10.5px);
+background-size:48px 48px;}
+#stage.panning{cursor:grabbing}
+#world{position:absolute;left:0;top:0;width:4000px;height:3000px;transform-origin:0 0}
+#edges{position:absolute;left:0;top:0;width:4000px;height:3000px;pointer-events:none;overflow:visible}
+#edges path{stroke:var(--gold);stroke-width:2.4;fill:none;opacity:.75}
+#edges path.hot{stroke:#ff9d7a;stroke-width:3.4;opacity:1}
+.node{position:absolute;width:250px;border-radius:24px;padding:14px 14px 12px;cursor:grab;user-select:none;
+background:linear-gradient(155deg,#17452c,#0e2f1f 60%,#0b2517);border:1.5px solid rgba(201,164,92,.45);
+box-shadow:0 14px 34px rgba(0,0,0,.45)}
+.node.sel{border-color:var(--gold-2);box-shadow:0 0 0 3px rgba(201,164,92,.35),0 14px 34px rgba(0,0,0,.5)}
+.node.ntype{font-size:11px;letter-spacing:.14em;color:var(--gold-2)}
+.node h3{margin:3px 0 6px;font-size:16px;font-family:var(--font-round)}
+.node p{margin:0;font-size:12.5px;color:var(--cream-dim);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}
+.node.nmeta{margin-top:8px;font-size:11px;color:var(--gold)}
+.node.nrow{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.node.mini{padding:5px 10px;font-size:12px;border-radius:99px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--cream)}
+.node.mini.goldb{background:linear-gradient(135deg,#e0bd72,#b08a3e);color:#201703;font-weight:700;border-color:transparent}
+.node.ports{position:absolute;top:50%;width:100%;left:0;pointer-events:none}
+.port{position:absolute;width:18px;height:18px;border-radius:50%;background:var(--gold);border:3px solid #0e2f1f;pointer-events:auto;cursor:crosshair;transform:translateY(-50%)}
+.port.in{left:-10px}.port.out{right:-10px;background:var(--gold-2)}
+.node.editor{font-size:11px;color:#9fd3ae;margin-top:6px}
+
+/* 浮动坞 */
+.dock{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:55;display:flex;gap:6px;padding:8px;border-radius:99px;max-width:calc(100% - 16px);flex-wrap:wrap;justify-content:center;
+background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);box-shadow:0 16px 40px rgba(0,0,0,.4)}
+.zoomdock{position:absolute;right:12px;bottom:14px;z-index:55;display:flex;gap:6px;align-items:center;padding:7px 10px;border-radius:99px;
+background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);font-size:13px}
+.zoomdock button{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--cream);font-size:16px}
+.hintbar{position:absolute;left:12px;bottom:14px;z-index:54;font-size:12px;color:var(--cream-dim);background:var(--glass);border:1px solid var(--line);border-radius:99px;padding:7px 13px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);max-width:46%}
+
+/* 面板通用 */
+.panel{position:absolute;top:10px;bottom:76px;width:min(400px,calc(100vw - 84px));z-index:70;display:none;flex-direction:column;overflow:hidden;
+background:linear-gradient(160deg,rgba(16,52,34,.82),rgba(8,28,18,.86));backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.panel.open{display:flex}
+.panel.left{left:74px;border-radius:30px}
+.panel.right{right:10px;border-radius:30px}
+.panel header{display:flex;align-items:center;gap:8px;padding:16px 18px 10px}
+.panel header h2{margin:0;font-size:18px;font-family:var(--font-round);color:var(--gold-2);flex:1}
+.panel.body{flex:1;overflow-y:auto;padding:4px 18px 18px}
+.panel.x{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--cream);font-size:16px;flex:none}
+.card{background:rgba(0,0,0,.24);border:1px solid rgba(201,164,92,.25);border-radius:20px;padding:13px 14px;margin-bottom:10px}
+.card h4{margin:0 0 4px;font-size:15px}
+.card p{margin:0;font-size:13px;color:var(--cream-dim)}
+.card.row{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+textarea.ta,input.inp,select.sel{width:100%;padding:11px 13px;border-radius:15px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:var(--cream);font-size:14px;outline:none}
+textarea.ta:focus,input.inp:focus{border-color:var(--gold)}
+textarea.ta{min-height:74px;resize:vertical}
+.lbl{font-size:12.5px;color:var(--cream-dim);margin:12px 0 6px}
+.tag{display:inline-block;padding:3px 10px;border-radius:99px;border:1px solid var(--line);font-size:11.5px;color:var(--gold-2);margin:2px 3px 2px 0}
+.tag.on{background:linear-gradient(135deg,#e0bd72,#b08a3e);color:#201703;font-weight:700;border-color:transparent}
+.empty{color:var(--cream-dim);font-size:13.5px;padding:16px 4px;text-align:center}
+.kv{font-size:12.5px;color:var(--cream-dim)}.kv b{color:var(--cream);font-weight:600}
+
+/* 小飞 */
+#feiPanel{width:min(410px,calc(100vw - 20px))}
+#feiMsgs{flex:1;overflow-y:auto;padding:6px 16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:88%;padding:11px 15px;font-size:14px;white-space:pre-wrap;word-break:break-word}
+.msg.bot{align-self:flex-start;background:rgba(0,0,0,.3);border:1px solid rgba(201,164,92,.3);border-radius:22px 22px 22px 8px}
+.msg.me{align-self:flex-end;background:linear-gradient(135deg,#e0bd72,#b08a3e);color:#221a05;border-radius:22px 22px 8px 22px;font-weight:600}
+.fei-quick{display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px 4px}
+.fei-quick button{padding:6px 11px;font-size:12px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--gold-2)}
+.fei-input{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
+.fei-input input{flex:1;padding:12px 15px;border-radius:99px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:var(--cream);font-size:15px;outline:none;min-width:0}
+#feiTab{position:absolute;right:0;top:42%;z-index:65;writing-mode:vertical-rl;padding:14px 8px;border-radius:16px 0 0 16px;border:1px solid var(--line);border-right:none;
+background:linear-gradient(180deg,#e0bd72,#b08a3e);color:#221a05;font-weight:800;font-size:14px;letter-spacing:.2em;cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.4)}
+
+/* 白模 */
+#blockTop{position:relative;height:270px;border-radius:20px;background:linear-gradient(160deg,#123824,#081c11);border:1px solid var(--line);overflow:hidden;touch-action:none}
+#blockTop.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(201,164,92,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(201,164,92,.13) 1px,transparent 1px);background-size:26px 26px}
+.bm{position:absolute;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;cursor:grab;transform:translate(-50%,-50%);border:2px solid rgba(255,255,255,.55);color:#10160f;z-index:3}
+.bm.cam{border-radius:14px;background:#e8cf8f}
+.bm.sel{outline:3px solid #ff9d7a}
+#blockPrev{border-radius:20px;border:1px solid var(--line);background:linear-gradient(180deg,#1a4430,#0a2115);padding:14px;font-size:13px;color:var(--cream-dim);min-height:96px}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);z-index:300;background:linear-gradient(135deg,#e0bd72,#b08a3e);color:#221a05;
+padding:12px 22px;border-radius:99px;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 16px 40px rgba(0,0,0,.45);max-width:92vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.modal{position:fixed;inset:0;z-index:250;background:rgba(3,10,6,.66);display:none;align-items:center;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.modal.box{width:min(440px,100%);background:linear-gradient(160deg,rgba(16,52,34,.95),rgba(8,28,18,.97));border:1px solid var(--line);border-radius:30px;padding:24px;box-shadow:0 30px 70px rgba(0,0,0,.6)}
+.modal h3{margin:0 0 14px;font-family:var(--font-round);color:var(--gold-2)}
+@media (max-width:640px){
+.rail{width:54px;border-radius:0 22px 22px 0}.rail button{width:42px;height:42px;font-size:17px}
+.panel.left{left:60px}.panel{bottom:120px}
+.brand{font-size:15px}.hintbar{display:none}
+.node{width:225px}
+header.topbar{gap:6px;padding:7px 8px}
+select.canvas-select{max-width:118px}
+}
+</style>
+</head>
+<body>
+
+<!-- 登录 -->
+<div id="authGate">
+<div class="auth-card">
+<h1>无限画布</h1>
+<p class="sub">网站版 · 手机和电脑浏览器直接打开就能用<br>注册一个账号，开始你的 AI 短片工作流。</p>
+<div class="auth-tabs">
+<button id="tabLogin" class="on" type="button">登录</button>
+<button id="tabReg" type="button">注册新账号</button>
+</div>
+<div class="field"><label for="authName">账号名</label><input id="authName" autocomplete="username" placeholder="比如 jade"></div>
+<div class="field"><label for="authPass">密码（至少 4 位）</label><input id="authPass" type="password" autocomplete="current-password" placeholder="输入密码"></div>
+<button class="btn gold auth-go" id="authGo" type="button">登录进入画布</button>
+<div class="auth-msg" id="authMsg"></div>
+<p class="auth-note">每个账号的画布互相分开；你和朋友各自注册、各自工作。<br>密码只在本页面内校验保存为哈希，不明文显示。</p>
+</div>
+</div>
+
+<!-- 主应用 -->
+<div id="app">
+<header class="topbar">
+<div class="brand">无限画布</div>
+<div class="group">
+<select class="canvas-select" id="canvasSelect" aria-label="切换画布"></select>
+<button class="btn small" id="btnNewCanvas" type="button">＋ 新建画布</button>
+<button class="btn small" id="btnRenameCanvas" type="button">重命名</button>
+<button class="btn small danger" id="btnDelCanvas" type="button">删除</button>
+</div>
+<div class="spacer"></div>
+<div class="group">
+<button class="btn small" id="btnOrder" type="button">⇅ 镜头顺序</button>
+<button class="btn small" id="btnGenAll" type="button">🖼 一键生成全部</button>
+<button class="btn small gold" id="btnCopyFlow" type="button">⚡ 一键复制工作流</button>
+<button class="btn small" id="btnFeiTop" type="button">💬 小飞</button>
+</div>
+<div class="user-chip"><span class="avatar-dot" id="avatarDot">?</span><span id="userLabel"></span><button class="btn small" id="btnLogout" type="button">退出</button></div>
+</header>
+
+<div class="main">
+<nav class="rail" aria-label="工具栏">
+<button type="button" data-panel="canvases">🗂<span>画布</span></button>
+<button type="button" data-panel="locks">🔒<span>锁定库</span></button>
+<button type="button" data-panel="skills">✦<span>技能库</span></button>
+<button type="button" data-panel="engines">⚙<span>引擎库</span></button>
+<button type="button" data-panel="kb">📚<span>知识库</span></button>
+<button type="button" data-panel="block">🧊<span>白模</span></button>
+<button type="button" data-panel="sheet">📋<span>请求单</span></button>
+<button type="button" data-panel="activity">🕘<span>动态</span></button>
+</nav>
+
+<div id="stageWrap">
+<div id="stage">
+<div id="world">
+<svg id="edges"></svg>
+<div id="nodes"></div>
+</div>
+</div>
+<div class="hintbar">拖空白处平移 · 滚轮 / 双指缩放 · 拖节点移动 · 点节点金色圆点再点另一个节点连线</div>
+<div class="dock" role="toolbar" aria-label="新建节点">
+<button class="btn small" data-add="story" type="button">＋ 故事</button>
+<button class="btn small" data-add="shot" type="button">＋ 镜头</button>
+<button class="btn small" data-add="image" type="button">＋ 图片</button>
+<button class="btn small" data-add="video" type="button">＋ 视频</button>
+<button class="btn small" data-add="block" type="button">＋ 白模</button>
+<button class="btn small" data-add="text" type="button">＋ 文本</button>
+</div>
+<div class="zoomdock">
+<button id="zoomOut" type="button" aria-label="缩小">−</button>
+<span id="zoomLabel">100%</span>
+<button id="zoomIn" type="button" aria-label="放大">＋</button>
+<button id="zoomFit" type="button" aria-label="回到原点" style="width:auto;padding:0 10px;border-radius:99px;font-size:12px">复位</button>
+</div>
+<div id="feiTab" role="button" tabindex="0">💬 小飞助手</div>
+
+<!-- 画布列表 -->
+<section class="panel left" id="panel-canvases">
+<header><h2>我的画布</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body">
+<div id="canvasList"></div>
+<div class="lbl">新建画布</div>
+<input class="inp" id="newCanvasName" placeholder="给新画布起个名字">
+<div style="height:8px"></div>
+<select class="sel" id="newCanvasKind"><option value="personal">个人画布（只有我能用）</option><option value="shared">共享画布（协作标记）</option></select>
+<div style="height:10px"></div>
+<button class="btn gold" id="btnCreateCanvas2" type="button" style="width:100%">创建画布</button>
+</div>
+</section>
+
+<!-- 节点编辑 -->
+<section class="panel left" id="panel-node">
+<header><h2 id="nodeEditTitle">节点</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body" id="nodeEditBody"></div>
+</section>
+
+<!-- 锁定库 -->
+<section class="panel left" id="panel-locks">
+<header><h2>锁定库</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body">
+<p class="kv">锁定的人物 / 场景会同步到所有镜头：换一次锁，全部镜头一起换，保持角色和场景一致。</p>
+<div id="lockList" style="margin-top:10px"></div>
+<div class="lbl">新增锁定</div>
+<input class="inp" id="lockName" placeholder="名字，如：黑衣男 / 雨夜街道">
+<div style="height:8px"></div>
+<select class="sel" id="lockKind"><option value="人物">人物</option><option value="场景">场景</option><option value="替身 Stand">替身 Stand</option><option value="道具">道具</option></select>
+<div style="height:8px"></div>
+<textarea class="ta" id="lockDesc" placeholder="外观锁定描述（中文）：发型、服装、体型、标志物…"></textarea>
+<div style="height:8px"></div>
+<textarea class="ta" id="lockDescEn" placeholder="English lock description (for MJ / overseas engines)"></textarea>
+<div style="height:10px"></div>
+<button class="btn gold" id="btnAddLock" type="button" style="width:100%">加入锁定库</button>
+</div>
+</section>
+
+<!-- 技能库 -->
+<section class="panel left" id="panel-skills">
+<header><h2>技能库</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body">
+<p class="kv">点亮技能后，拆镜和生成提示词会自动带上对应规则。后续可以继续往库里加新技能。</p>
+<div id="skillList" style="margin-top:10px"></div>
+<div class="lbl">新增自定义技能</div>
+<input class="inp" id="skillName" placeholder="技能名，如：一句话拆镜">
+<div style="height:8px"></div>
+<textarea class="ta" id="skillDesc" placeholder="技能规则说明：它会在提示词里加什么…"></textarea>
+<div style="height:10px"></div>
+<button class="btn gold" id="btnAddSkill" type="button" style="width:100%">加入技能库</button>
+</div>
+</section>
+
+<!-- 引擎库 -->
+<section class="panel left" id="panel-engines">
+<header><h2>引擎库</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body">
+<p class="kv">选当前引擎，生成请求单会按引擎格式出词。外部手动引擎 = 在画布里出好词，你复制去对应平台手动生成。</p>
+<div id="engineList" style="margin-top:10px"></div>
+<div class="lbl">新增引擎</div>
+<input class="inp" id="engineName" placeholder="引擎名">
+<div style="height:8px"></div>
+<textarea class="ta" id="engineDesc" placeholder="说明：平台、参数后缀（如 --ar 16:9）…"></textarea>
+<div style="height:10px"></div>
+<button class="btn gold" id="btnAddEngine" type="button" style="width:100%">加入引擎库</button>
+</div>
+</section>
+
+<!-- 知识库 -->
+<section class="panel left" id="panel-kb">
+<header><h2>本地知识库</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body">
+<p class="kv">流程：先<b style="color:var(--gold-2)">匹配候选</b> → 你<b style="color:var(--gold-2)">勾选确认</b> → <b style="color:var(--gold-2)">定向精读</b> → 精读要点拼进提示词。出词前先查你的资料，不凭空编。</p>
+<div class="lbl">添加资料（剧本 / 参考 / 设定）</div>
+<input class="inp" id="kbTitle" placeholder="资料名，如：雨夜对决剧本终稿">
+<div style="height:8px"></div>
+<textarea class="ta" id="kbText" placeholder="把剧本、设定、参考资料的文字粘进来…" style="min-height:110px"></textarea>
+<div style="height:10px"></div>
+<button class="btn gold" id="btnAddKb" type="button" style="width:100%">存入知识库</button>
+<div class="lbl">① 输入当前主题，匹配候选</div>
+<input class="inp" id="kbQuery" placeholder="如：时域对决 / 苍星 / 雨夜街道">
+<div style="height:8px"></div>
+<button class="btn" id="btnKbMatch" type="button" style="width:100%">匹配候选资料</button>
+<div id="kbCand" style="margin-top:10px"></div>
+<div class="lbl">② 确认后定向精读</div>
+<button class="btn gold" id="btnKbRead" type="button" style="width:100%">定向精读已确认资料</button>
+<div id="kbDigest" style="margin-top:10px"></div>
+</div>
+</section>
+
+<!-- 白模 -->
+<section class="panel left" id="panel-block">
+<header><h2>白模场景编辑器</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body">
+<p class="kv">俯视图里拖动人物和摄像机定站位；站位说明会原样写进提示词，保留空间感。点选圆点后用下方滑杆调它。</p>
+<div style="height:10px"></div>
+<div id="blockTop"><div class="grid-bg"></div><div id="bmLayer"></div></div>
+<div class="row" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+<button class="btn small" id="bmAddChar" type="button">＋ 人物</button>
+<button class="btn small" id="bmAddCam" type="button">＋ 摄像机</button>
+<button class="btn small danger" id="bmDel" type="button">删除选中</button>
+</div>
+<div class="lbl">选中对象：<b id="bmSelName" style="color:var(--gold-2)">无</b></div>
+<div class="lbl">朝向角度 <span id="bmAngVal">0°</span></div>
+<input type="range" id="bmAng" min="0" max="359" value="0">
+<div class="lbl">摄像机焦距 <span id="bmFocalVal">50mm</span></div>
+<input type="range" id="bmFocal" min="16" max="135" value="50">
+<div class="lbl">构图预览（按当前站位生成文字预览）</div>
+<div id="blockPrev">在俯视图里摆好人物和摄像机，这里会给出构图与站位说明。</div>
+<div style="height:10px"></div>
+<button class="btn gold" id="bmToNode" type="button" style="width:100%">把站位写成白模节点放上画布</button>
+</div>
+</section>
+
+<!-- 请求单 -->
+<section class="panel left" id="panel-sheet">
+<header><h2>生成请求单</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body">
+<p class="kv">单个生成 / 一键生成全部，都会把双语提示词放进这里。复制整单发回给你常用的生成渠道即可逐个生成。</p>
+<div id="sheetList" style="margin-top:10px"></div>
+<div class="row" style="display:flex;gap:6px;flex-wrap:wrap">
+<button class="btn gold" id="btnCopySheet" type="button">📋 复制整张请求单</button>
+<button class="btn danger" id="btnClearSheet" type="button">清空</button>
+</div>
+</div>
+</section>
+
+<!-- 动态 -->
+<section class="panel left" id="panel-activity">
+<header><h2>操作动态</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body"><div id="activityList"></div></div>
+</section>
+
+<!-- 顺序 -->
+<section class="panel left" id="panel-order">
+<header><h2>镜头顺序</h2><button class="x" data-close type="button">✕</button></header>
+<div class="body">
+<p class="kv">用 ↑ ↓ 调整镜头顺序，镜号会按新顺序重新编号。</p>
+<div id="orderList" style="margin-top:10px"></div>
+</div>
+</section>
+
+<!-- 小飞 -->
+<section class="panel right" id="feiPanel">
+<header><h2>💬 小飞 · 画布助手</h2><button class="x" id="feiClose" type="button">✕</button></header>
+<div class="fei-quick" id="feiQuick"></div>
+<div id="feiMsgs"></div>
+<div class="fei-input">
+<input id="feiText" placeholder="问小飞：怎么一键生成分镜图？">
+<button class="btn gold" id="feiSend" type="button">发送</button>
+</div>
+</section>
+</div>
+</div>
+</div>
+
+<div class="modal" id="modal">
+<div class="box">
+<h3 id="modalTitle">提示</h3>
+<div id="modalBody"></div>
+<div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+<button class="btn" id="modalCancel" type="button">取消</button>
+<button class="btn gold" id="modalOk" type="button">确定</button>
+</div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============ 工具 ============ */
+var $=function(id){return document.getElementById(id)};
+var uid=function(p){return p+"_"+Math.random().toString(36).slice(2,9)};
+var nowStr=function(){var d=new Date();return (d.getMonth()+1)+"/"+d.getDate()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
+function hashPw(s){var h=5381;for(var i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))>>>0}return "h"+h.toString(16)}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function toast(msg){var t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._tm);t._tm=setTimeout(function(){t.classList.remove("show")},2400)}
+function copyText(txt,okMsg){
+function done(){toast(okMsg||"已复制到剪贴板 ✓")}
+if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,function(){fallback()})}else{fallback()}
+function fallback(){var ta=document.createElement("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");done()}catch(e){toast("复制失败，请长按手动复制")}document.body.removeChild(ta)}
+}
+var modalCb=null;
+function showModal(title,bodyHTML,cb){$("modalTitle").textContent=title;$("modalBody").innerHTML=bodyHTML;$("modal").classList.add("open");modalCb=cb||null}
+$("modalCancel").onclick=function(){$("modal").classList.remove("open");modalCb=null};
+$("modalOk").onclick=function(){var cb=modalCb;$("modal").classList.remove("open");modalCb=null;if(cb)cb()};
+
+/* ============ 数据（本次打开期间保存在页面内） ============ */
+var DB={accounts:{},session:null};
+var TYPE_LABEL={story:"故事",shot:"镜头",image:"图片",video:"视频",block:"白模",text:"文本"};
+var NEG_CN="否定（中文）：不要变形的手指，不要多余人物，不要水印，不要文字乱码，不要脸部崩坏，不要廉价塑料感";
+var NEG_EN="Negative: deformed hands, extra people, watermark, garbled text, distorted face, cheap plastic look";
+
+function defaultSkills(){return [
+{id:uid("sk"),name:"一句话拆镜",desc:"把一句话故事按场次拆成 N 个 10 秒镜头，每镜含画面、对白、运镜。",on:true},
+{id:uid("sk"),name:"AI 高燃打斗（Seedance）",desc:"攻防逻辑清晰、节奏呼吸、慢-快-慢、打击特效反馈，适配 Seedance 2.0。",on:false},
+{id:uid("sk"),name:"电影感打斗图（MJ）",desc:"动作冻结在撞击前一瞬，低机位近景，地面开裂、碎屑雨水飞溅，湿皮肤湿衣。",on:false},
+{id:uid("sk"),name:"场景一致性模拟",desc:"先定俯视站位图再生成，人物左右站位、距离、镜头方向全程锁定不漂移。",on:false},
+{id:uid("sk"),name:"知识库精读出词",desc:"先匹配知识库、确认后定向精读，精读要点拼进提示词再出词。",on:true}
+]}
+function defaultEngines(){return [
+{id:uid("en"),name:"Muse 视频",desc:"站内主引擎：请求单复制后发回聊天生成视频。",suffix:"",on:true},
+{id:uid("en"),name:"Midjourney v7（外部手动）",desc:"外部手动引擎：在 MJ 里粘贴英文提示词出图。",suffix:" --style raw --v 7 --ar 16:9",on:false},
+{id:uid("en"),name:"Seedance 2.0（外部手动）",desc:"外部手动引擎：复制中文分镜提示词去 Seedance 生成。",suffix:"",on:false},
+{id:uid("en"),name:"Minimax（外部手动）",desc:"外部手动引擎：按 Minimax 提示词选项出词后手动生成。",suffix:"",on:false}
+]}
+function newCanvasObj(name,kind){return {id:uid("cv"),name:name||"未命名画布",kind:kind||"personal",updated:nowStr(),
+nodes:[],edges:[],locks:[],skills:defaultSkills(),engines:defaultEngines(),kb:[],kbDigest:"",sheet:[],activity:[],fei:[],
+block:{items:[],sel:null},view:{x:60,y:50,k:1}}}
+function seedUserData(){
+var cv=newCanvasObj("我的第一块画布","personal");
+cv.locks=[
+{id:uid("lk"),kind:"人物",name:"黑衣男",desc:"黑衣长风衣，身形高大，湿发，眼神锐利，雨夜街道",descEn:"tall man in black long coat, wet hair, sharp gaze, rainy night street"},
+{id:uid("lk"),kind:"人物",name:"蓝衣男",desc:"蓝衣，身形高大，神情冷峻，与黑衣男对峙",descEn:"tall man in blue outfit, cold expression, facing off against the man in black"},
+{id:uid("lk"),kind:"场景",name:"雨夜霓虹街道",desc:"雨夜日本街道，湿地面反光，霓虹灯牌，居酒屋灯笼",descEn:"rainy Japanese street at night, wet reflective ground, neon signs, izakaya lanterns"}
+];
+var story={id:uid("nd"),type:"story",x:80,y:80,title:"一句话故事",text:"雨夜街道，蓝衣男召唤金色替身开启时域冻结雨幕，黑衣男抬手召唤银紫替身反锁时域并连打反击。",shots:[]};
+cv.nodes.push(story);
+logAct(cv,"创建了画布「"+cv.name+"」");
+return {canvases:[cv],current:cv.id};
+}
+function curUser(){return DB.session?DB.accounts[DB.session]:null}
+function curData(){return curUser()?curUser().data:null}
+function curCanvas(){var d=curData();if(!d)return null;for(var i=0;i<d.canvases.length;i++)if(d.canvases[i].id===d.current)return d.canvases[i];return d.canvases[0]||null}
+function logAct(cv,text){if(!cv)return;cv.activity.unshift({t:nowStr(),who:DB.session||"",text:text});if(cv.activity.length>60)cv.activity.length=60;cv.updated=nowStr()}
+
+/* ============ 登录 / 注册 ============ */
+var authMode="login";
+function setAuthMode(m){authMode=m;$("tabLogin").classList.toggle("on",m==="login");$("tabReg").classList.toggle("on",m==="reg");$("authGo").textContent=m==="login"?"登录进入画布":"注册并进入画布";$("authMsg").textContent=""}
+$("tabLogin").onclick=function(){setAuthMode("login")};
+$("tabReg").onclick=function(){setAuthMode("reg")};
+$("authGo").onclick=function(){
+var name=$("authName").value.trim(),pw=$("authPass").value;
+if(!name){$("authMsg").textContent="先填一个账号名";return}
+if(!pw||pw.length<4){$("authMsg").textContent="密码至少 4 位";return}
+if(authMode==="reg"){
+if(DB.accounts[name]){$("authMsg").textContent="这个账号名已经被注册了，换一个或直接登录";return}
+DB.accounts[name]={pw:hashPw(pw),data:seedUserData()};
+DB.session=name;enterApp();toast("注册成功，欢迎来到你的画布 ✓");
+}else{
+var acc=DB.accounts[name];
+if(!acc){$("authMsg").textContent="还没有这个账号，点上面「注册新账号」先注册";return}
+if(acc.pw!==hashPw(pw)){$("authMsg").textContent="密码不对，再试一次";return}
+DB.session=name;enterApp();toast("登录成功 ✓");
+}
+};
+$("authPass").addEventListener("keydown",function(e){if(e.key==="Enter")$("authGo").click()});
+$("btnLogout").onclick=function(){DB.session=null;$("app").style.display="none";$("authGate").style.display="flex";setAuthMode("login")};
+
+function enterApp(){
+$("authGate").style.display="none";$("app").style.display="flex";
+$("userLabel").textContent=DB.session;$("avatarDot").textContent=(DB.session||"?").slice(0,1).toUpperCase();
+refreshCanvasSelect();renderAll();
+var cv=curCanvas();if(cv&&cv.fei.length===0){feiSay("你好，我是小飞 👋 这块画布的功能都可以问我：新建画布、锁定库、技能库、引擎库、一句话拆镜、白模站位、一键分镜头生成、一键复制工作流、知识库精读。点上面的快捷问题，或者直接打字问我。")}
+renderFei();
+}
+
+/* ============ 画布管理 ============ */
+function refreshCanvasSelect(){
+var d=curData();if(!d)return;var sel=$("canvasSelect");sel.innerHTML="";
+d.canvases.forEach(function(c){var o=document.createElement("option");o.value=c.id;o.textContent=(c.kind==="shared"?"🤝 ":"")+c.name;if(c.id===d.current)o.selected=true;sel.appendChild(o)});
+renderCanvasList();
+}
+$("canvasSelect").onchange=function(){var d=curData();d.current=this.value;clearSel();renderAll();toast("已切换到「"+curCanvas().name+"」")};
+function createCanvas(name,kind){
+var d=curData();var cv=newCanvasObj(name||"未命名画布",kind||"personal");d.canvases.push(cv);d.current=cv.id;
+logAct(cv,"新建画布");refreshCanvasSelect();clearSel();renderAll();toast("新画布建好了 ✓");return cv;
+}
+$("btnNewCanvas").onclick=function(){openPanel("canvases");$("newCanvasName").focus()};
+$("btnCreateCanvas2").onclick=function(){createCanvas($("newCanvasName").value.trim()||undefined,$("newCanvasKind").value);$("newCanvasName").value="";closePanels()};
+$("btnRenameCanvas").onclick=function(){
+var cv=curCanvas();if(!cv)return;
+showModal("重命名画布",'<input class="inp" id="mName" value="'+esc(cv.name)+'">',function(){
+var v=$("mName").value.trim();if(v){cv.name=v;logAct(cv,"重命名画布为「"+v+"」");refreshCanvasSelect();renderActivity();toast("已重命名 ✓")}});
+setTimeout(function(){var i=$("mName");if(i)i.focus()},50);
+};
+$("btnDelCanvas").onclick=function(){
+var d=curData(),cv=curCanvas();if(!cv)return;
+if(d.canvases.length<=1){toast("至少保留一块画布");return}
+showModal("删除画布","<p class='kv'>确定删除「<b style='color:var(--cream)'>"+esc(cv.name)+"</b>」吗？里面的节点会一起删掉。</p>",function(){
+d.canvases=d.canvases.filter(function(c){return c.id!==cv.id});d.current=d.canvases[0].id;refreshCanvasSelect();clearSel();renderAll();toast("画布已删除")});
+};
+function renderCanvasList(){
+var d=curData();if(!d)return;var box=$("canvasList");box.innerHTML="";
+d.canvases.forEach(function(c){
+var div=document.createElement("div");div.className="card";
+div.innerHTML="<h4>"+(c.kind==="shared"?"🤝 ":"")+esc(c.name)+(c.id===d.current?' <span class="tag on">当前</span>':"")+"</h4><p>"+(c.kind==="shared"?"共享协作画布":"个人画布")+" · "+c.nodes.length+" 个节点 · 最后修改 "+esc(c.updated)+"</p>";
+var row=document.createElement("div");row.className="row";
+var b1=document.createElement("button");b1.className="btn small";b1.textContent="打开";b1.onclick=function(){d.current=c.id;refreshCanvasSelect();clearSel();renderAll();closePanels()};
+var b2=document.createElement("button");b2.className="btn small";b2.textContent="重命名";b2.onclick=function(){d.current=c.id;refreshCanvasSelect();renderAll();$("btnRenameCanvas").click()};
+row.appendChild(b1);row.appendChild(b2);div.appendChild(row);box.appendChild(div);
+});
+}
+
+/* ============ 面板开关 ============ */
+var PANELS=["canvases","node","locks","skills","engines","kb","block","sheet","activity","order"];
+function closePanels(){PANELS.forEach(function(p){var el=$("panel-"+p);if(el)el.classList.remove("open")});
+document.querySelectorAll(".rail button").forEach(function(b){b.classList.remove("on")})}
+function openPanel(name){
+var was=$("panel-"+name)&&$("panel-"+name).classList.contains("open");
+closePanels();$("feiPanel").classList.remove("open");
+if(was)return;
+var el=$("panel-"+name);if(el)el.classList.add("open");
+document.querySelectorAll(".rail button").forEach(function(b){b.classList.toggle("on",b.dataset.panel===name)});
+if(name==="canvases")renderCanvasList();if(name==="locks")renderLocks();if(name==="skills")renderSkills();
+if(name==="engines")renderEngines();if(name==="kb")renderKb();if(name==="block")renderBlock();
+if(name==="sheet")renderSheet();if(name==="activity")renderActivity();if(name==="order")renderOrder();
+}
+document.querySelectorAll(".rail button").forEach(function(b){b.onclick=function(){openPanel(b.dataset.panel)}});
+document.querySelectorAll("[data-close]").forEach(function(b){b.onclick=function(){closePanels()}});
+
+/* ============ 无限画布：平移缩放 ============ */
+var stage=$("stage"),world=$("world"),nodesEl=$("nodes"),edgesEl=$("edges");
+function view(){return curCanvas().view}
+function applyView(){var v=view();world.style.transform="translate("+v.x+"px,"+v.y+"px) scale("+v.k+")";$("zoomLabel").textContent=Math.round(v.k*100)+"%"}
+function setZoom(k,cx,cy){
+var v=view();k=Math.min(2.2,Math.max(.25,k));
+var r=stage.getBoundingClientRect();cx=(cx==null?r.width/2:cx);cy=(cy==null?r.height/2:cy);
+var wx=(cx-v.x)/v.k,wy=(cy-v.y)/v.k;v.k=k;v.x=cx-wx*k;v.y=cy-wy*k;applyView();
+}
+$("zoomIn").onclick=function(){setZoom(view().k*1.2)};
+$("zoomOut").onclick=function(){setZoom(view().k/1.2)};
+$("zoomFit").onclick=function(){var v=view();v.x=60;v.y=50;v.k=1;applyView()};
+stage.addEventListener("wheel",function(e){e.preventDefault();var r=stage.getBoundingClientRect();setZoom(view().k*(e.deltaY<0?1.1:0.9),e.clientX-r.left,e.clientY-r.top)},{passive:false});
+
+var drag=null;
+stage.addEventListener("pointerdown",function(e){
+if(e.target!==stage&&e.target!==world&&e.target!==nodesEl&&e.target!==edgesEl)return;
+drag={mode:"pan",sx:e.clientX,sy:e.clientY,vx:view().x,vy:view().y};stage.classList.add("panning");stage.setPointerCapture(e.pointerId);clearSel();
+});
+stage.addEventListener("pointermove",function(e){
+if(!drag)return;
+if(drag.mode==="pan"){view().x=drag.vx+(e.clientX-drag.sx);view().y=drag.vy+(e.clientY-drag.sy);applyView()}
+else if(drag.mode==="node"){var n=drag.node;n.x=drag.nx+(e.clientX-drag.sx)/view().k;n.y=drag.ny+(e.clientY-drag.sy)/view().k;positionNode(drag.el,n);drawEdges()}
+else if(drag.mode==="bm"){bmMove(e)}
+});
+stage.addEventListener("pointerup",function(){if(drag&&drag.mode==="node"){var cv=curCanvas();logAct(cv,"移动了节点「"+drag.node.title+"」")}drag=null;stage.classList.remove("panning")});
+stage.addEventListener("pointercancel",function(){drag=null;stage.classList.remove("panning")});
+/* 触摸双指缩放 */
+var pinch=null;
+stage.addEventListener("touchstart",function(e){if(e.touches.length===2){var a=e.touches[0],b=e.touches[1];pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),k:view().k}}},{passive:true});
+stage.addEventListener("touchmove",function(e){if(pinch&&e.touches.length===2){var a=e.touches[0],b=e.touches[1];var d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);var r=stage.getBoundingClientRect();setZoom(pinch.k*d/pinch.d,(a.clientX+b.clientX)/2-r.left,(a.clientY+b.clientY)/2-r.top)}},{passive:true});
+stage.addEventListener("touchend",function(){pinch=null});
+
+/* ============ 节点 ============ */
+var selNode=null,linkFrom=null;
+function findNode(id){var cv=curCanvas();for(var i=0;i<cv.nodes.length;i++)if(cv.nodes[i].id===id)return cv.nodes[i];return null}
+function clearSel(){selNode=null;linkFrom=null;document.querySelectorAll(".node").forEach(function(n){n.classList.remove("sel")});drawEdges()}
+function positionNode(el,n){el.style.left=n.x+"px";el.style.top=n.y+"px"}
+function nodeSummary(n){
+if(n.type==="story")return n.text||"（点节点编辑故事）";
+if(n.type==="shot")return ""+(n.visual||"")+"\n"+(n.camera||"")+(n.dialogue?"\n"+n.dialogue:"");
+if(n.type==="image"||n.type==="video")return n.promptCn||"（点节点编辑提示词）";
+if(n.type==="block")return n.text||"";
+return n.text||"";
+}
+function renderNodes(){
+var cv=curCanvas();nodesEl.innerHTML="";
+cv.nodes.forEach(function(n){
+var el=document.createElement("div");el.className="node"+(selNode===n.id?" sel":"");el.dataset.id=n.id;positionNode(el,n);
+var inner='<div class="ports"><div class="port in" data-port="in"></div><div class="port out" data-port="out"></div></div>'
++'<div class="ntype">'+TYPE_LABEL[n.type]+(n.type==="shot"?" · 第 "+n.no+" 镜 · 10 秒":"")+(n.type==="image"&&n.shotNo?" · 第 "+n.shotNo+" 镜分镜图":"")+'</div>'
++"<h3>"+esc(n.title)+"</h3><p>"+esc(nodeSummary(n))+"</p>";
+if(n.refs&&n.refs.length)inner+='<div class="nmeta">🔗 参考：'+esc(n.refs.join("、"))+"</div>";
+if(n.lastEditor)inner+='<div class="editor">✎ '+esc(n.lastEditor)+" 最近修改</div>";
+inner+='<div class="nrow">';
+if(n.type==="story")inner+='<button class="mini goldb" data-act="split">✂ 一句话拆镜</button><button class="mini goldb" data-act="storyboard">🖼 一键分镜头生成</button>';
+if(n.type==="shot")inner+='<button class="mini" data-act="mkimg">🖼 生成分镜图节点</button>';
+if(n.type==="image"||n.type==="video")inner+='<button class="mini goldb" data-act="gen1">▶ 生成这一'+(n.type==="image"?"张":"条")+'</button>';
+inner+='<button class="mini" data-act="edit">编辑</button></div>';
+el.innerHTML=inner;
+el.addEventListener("pointerdown",function(e){
+if(e.target.closest("button")||e.target.closest(".port"))return;
+e.stopPropagation();selectNode(n.id);
+drag={mode:"node",node:n,el:el,sx:e.clientX,sy:e.clientY,nx:n.x,ny:n.y};stage.setPointerCapture(e.pointerId);
+});
+el.querySelectorAll(".port").forEach(function(p){
+p.addEventListener("pointerdown",function(e){e.stopPropagation()});
+p.addEventListener("click",function(e){e.stopPropagation();portClick(n.id,p.dataset.port)});
+});
+el.querySelectorAll("[data-act]").forEach(function(b){
+b.addEventListener("click",function(e){e.stopPropagation();nodeAction(n,b.dataset.act)});
+});
+nodesEl.appendChild(el);
+});
+drawEdges();
+}
+function selectNode(id){selNode=id;document.querySelectorAll(".node").forEach(function(el){el.classList.toggle("sel",el.dataset.id===id)});drawEdges()}
+function portClick(id,port){
+var cv=curCanvas();
+if(!linkFrom){linkFrom=id;toast("已选起点，再点另一个节点的圆点完成连线");drawEdges();return}
+if(linkFrom===id){linkFrom=null;drawEdges();return}
+var exists=cv.edges.some(function(e){return e.from===linkFrom&&e.to===id});
+if(!exists){cv.edges.push({id:uid("eg"),from:linkFrom,to:id});logAct(cv,"连线："+(findNode(linkFrom)||{}).title+" → "+(findNode(id)||{}).title)}
+linkFrom=null;drawEdges();
+}
+function drawEdges(){
+var cv=curCanvas();if(!cv)return;var s="";
+cv.edges.forEach(function(e){
+var a=findNode(e.from),b=findNode(e.to);if(!a||!b)return;
+var x1=a.x+250,y1=a.y+70,x2=b.x,y2=b.y+70,mx=Math.max(40,Math.abs(x2-x1)/2);
+var hot=linkFrom&&(e.from===linkFrom||e.to===linkFrom);
+s+='<path class="'+(hot?"hot":"")+'" d="M'+x1+" "+y1+" C "+(x1+mx)+" "+y1+", "+(x2-mx)+" "+y2+", "+x2+" "+y2+'"/>';
+});
+if(linkFrom){var a=findNode(linkFrom);if(a)s+='<circle cx="'+(a.x+250)+'" cy="'+(a.y+70)+'" r="9" fill="#ff9d7a"/>';}
+edgesEl.innerHTML=s;
+}
+function addNode(type,x,y){
+var cv=curCanvas();var v=view();
+var n={id:uid("nd"),type:type,x:x!=null?x:(140-v.x)/v.k+cv.nodes.length*26,y:y!=null?y:(120-v.y)/v.k+cv.nodes.length*22,title:"",text:"",lastEditor:DB.session};
+if(type==="story"){n.title="一句话故事";n.text="";n.shots=[]}
+if(type==="shot"){n.title="镜头";n.no=shotNodes().length+1;n.visual="";n.camera="缓推";n.dialogue="";n.tail="以本镜尾帧接下一镜"}
+if(type==="image"){n.title="图片节点";n.promptCn="";n.promptEn="";n.refs=[]}
+if(type==="video"){n.title="视频节点";n.promptCn="";n.promptEn="";n.refs=[]}
+if(type==="block"){n.title="白模站位";n.text=blockDescribe()}
+if(type==="text"){n.title="文本备注";n.text=""}
+cv.nodes.push(n);logAct(cv,"新建"+TYPE_LABEL[type]+"节点");renderNodes();selectNode(n.id);openNodeEditor(n);return n;
+}
+document.querySelectorAll("[data-add]").forEach(function(b){b.onclick=function(){addNode(b.dataset.add)}});
+function shotNodes(){var cv=curCanvas();return cv.nodes.filter(function(n){return n.type==="shot"}).sort(function(a,b){return a.no-b.no})}
+function nodeAction(n,act){
+if(act==="edit")openNodeEditor(n);
+if(act==="split")splitStory(n);
+if(act==="storyboard")buildStoryboard(n);
+if(act==="mkimg")makeShotImage(n,true);
+if(act==="gen1")genOne(n);
+}
+
+/* ============ 节点编辑面板 ============ */
+function openNodeEditor(n){
+selectNode(n.id);closePanels();$("feiPanel").classList.remove("open");
+$("panel-node").classList.add("open");$("nodeEditTitle").textContent=TYPE_LABEL[n.type]+" · "+n.title;
+var b=$("nodeEditBody");var h="";
+h+='<div class="lbl">标题</div><input class="inp" id="neTitle" value="'+esc(n.title)+'">';
+if(n.type==="story"){
+h+='<div class="lbl">一句话故事（写完点下面拆镜）</div><textarea class="ta" id="neText" style="min-height:110px" placeholder="例如：雨夜街道，蓝衣男召唤金色替身开启时域冻结雨幕，黑衣男反锁时域连打反击。">'+esc(n.text)+'</textarea>'
++'<div class="lbl">拆成几个镜头</div><input class="inp" id="neCount" type="number" min="1" max="12" value="'+(n.shots&&n.shots.length?n.shots.length:4)+'">'
++'<p class="kv" style="margin-top:8px">每镜固定 10 秒。台词时长会按每镜约 20–28 字估算，对白太长会提醒你拆短。</p>'
++'<div class="row" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="btn gold" id="neSplit">✂ 一句话拆镜</button><button class="btn gold" id="neStoryboard">🖼 一键分镜头生成</button></div>';
+}else if(n.type==="shot"){
+h+='<div class="lbl">画面（中文）</div><textarea class="ta" id="neVisual">'+esc(n.visual||"")+'</textarea>'
++'<div class="lbl">运镜</div><input class="inp" id="neCamera" value="'+esc(n.camera||"")+'" placeholder="如：低机位缓推 / 过肩镜头">'
++'<div class="lbl">对白（可空）</div><input class="inp" id="neDialogue" value="'+esc(n.dialogue||"")+'">'
++'<div class="lbl">尾帧接力说明</div><input class="inp" id="neTail" value="'+esc(n.tail||"")+'">'
++'<div id="neDlgWarn" class="kv" style="margin-top:8px"></div>';
+}else if(n.type==="image"||n.type==="video"){
+h+='<div class="lbl">中文提示词</div><textarea class="ta" id="neCn" style="min-height:100px">'+esc(n.promptCn||"")+'</textarea>'
++'<div class="lbl">English prompt</div><textarea class="ta" id="neEn" style="min-height:100px">'+esc(n.promptEn||"")+'</textarea>'
++'<div class="lbl">参考链接（自动）</div><p class="kv">'+(n.refs&&n.refs.length?esc(n.refs.join("、")):"暂无参考")+'</p>'
++'<div class="row" style="display:flex;gap:6px;margin-top:10px"><button class="btn gold" id="neGen1">▶ 生成这一'+(n.type==="image"?"张":"条")+'</button></div>';
+}else{
+h+='<div class="lbl">内容</div><textarea class="ta" id="neText" style="min-height:130px">'+esc(n.text||"")+'</textarea>';
+}
+h+='<div class="row" style="display:flex;gap:6px;margin-top:16px;flex-wrap:wrap"><button class="btn gold" id="neSave">保存</button>'
++'<button class="btn" id="neDup">复制节点</button><button class="btn danger" id="neDel">删除节点</button></div>'
++'<p class="kv" style="margin-top:10px">连线：点这个节点的金色圆点，再点目标节点的圆点。删除连线：先选中任一端节点，再点下方按钮。</p>'
++'<button class="btn small danger" id="neDelEdges">删除与本节点相关的连线</button>';
+b.innerHTML=h;
+$("neSave").onclick=function(){saveNodeEditor(n)};
+$("neDup").onclick=function(){
+var cv=curCanvas();var c=JSON.parse(JSON.stringify(n));c.id=uid("nd");c.x=n.x+36;c.y=n.y+36;c.lastEditor=DB.session;cv.nodes.push(c);logAct(cv,"复制了节点「"+n.title+"」");renderNodes();toast("节点已复制 ✓")};
+$("neDel").onclick=function(){
+var cv=curCanvas();cv.nodes=cv.nodes.filter(function(x){return x.id!==n.id});cv.edges=cv.edges.filter(function(e){return e.from!==n.id&&e.to!==n.id});
+logAct(cv,"删除了节点「"+n.title+"」");selNode=null;closePanels();renderNodes();renderActivity();toast("节点已删除")};
+$("neDelEdges").onclick=function(){var cv=curCanvas();cv.edges=cv.edges.filter(function(e){return e.from!==n.id&&e.to!==n.id});drawEdges();toast("连线已删除")};
+var sp=$("neSplit");if(sp)sp.onclick=function(){saveNodeEditor(n,true);splitStory(n)};
+var sb=$("neStoryboard");if(sb)sb.onclick=function(){saveNodeEditor(n,true);buildStoryboard(n)};
+var g1=$("neGen1");if(g1)g1.onclick=function(){saveNodeEditor(n,true);genOne(n)};
+var dg=$("neDialogue");if(dg){var chk=function(){var w=$("neDlgWarn");if(!w)return;var len=(dg.value||"").length;
+w.innerHTML=len>28?'<span style="color:#f0a894">⚠ 对白 '+len+' 字，10 秒念不完（约需 '+Math.ceil(len/4)+' 秒以上语速会很赶），建议拆短或分到下一镜。</span>':(len>0?"✓ 对白约 "+Math.max(1,Math.round(len/4))+" 秒，10 秒内念得完。":"")};dg.oninput=chk;chk()}
+}
+function saveNodeEditor(n,silent){
+var t=$("neTitle");if(t)n.title=t.value.trim()||n.title;
+if(n.type==="story"){var tx=$("neText");if(tx)n.text=tx.value}
+if(n.type==="shot"){var v=$("neVisual");if(v)n.visual=v.value;var c=$("neCamera");if(c)n.camera=c.value;var d=$("neDialogue");if(d)n.dialogue=d.value;var tl=$("neTail");if(tl)n.tail=tl.value}
+if(n.type==="image"||n.type==="video"){var cn=$("neCn");if(cn)n.promptCn=cn.value;var en=$("neEn");if(en)n.promptEn=en.value}
+if(n.type==="text"||n.type==="block"){var tx2=$("neText");if(tx2)n.text=tx2.value}
+n.lastEditor=DB.session;var cv=curCanvas();cv.updated=nowStr();
+if(!silent){logAct(cv,"编辑了节点「"+n.title+"」");toast("已保存 ✓")}
+renderNodes();
+}
+
+/* ============ 拆镜 ============ */
+function splitStory(story){
+var cv=curCanvas();var text=(story.text||"").trim();
+if(!text){toast("先在故事节点里写一句话故事");openNodeEditor(story);return}
+var cntEl=$("neCount");var want=cntEl?parseInt(cntEl.value,10):0;
+var parts=text.split(/(?<=[，。；、！？,.!?])/).map(function(s){return s.trim()}).filter(Boolean);
+if(!want||want<1)want=Math.min(8,Math.max(2,parts.length||3));
+var beats=[];
+if(parts.length>=want){for(var i=0;i<want;i++){var idx=Math.round(i*(parts.length-1)/Math.max(1,want-1));beats.push(parts[idx])}}
+else{var frames=["开场建立场景与人物站位","冲突升级，动作展开","关键转折，特效/替身登场","高潮对决，慢-快-慢节奏","收束定格，尾帧留悬念","余韵镜头，情绪落点","新威胁出现","最终定格"];
+for(var j=0;j<want;j++)beats.push((parts[j%Math.max(1,parts.length)]||text)+" —— "+frames[j%frames.length])}
+/* 清掉旧镜头节点（属于本故事的） */
+var oldIds={};cv.nodes.forEach(function(n){if(n.type==="shot"&&n.fromStory===story.id)oldIds[n.id]=1});
+cv.nodes=cv.nodes.filter(function(n){return!oldIds[n.id]});
+cv.edges=cv.edges.filter(function(e){return!oldIds[e.from]&&!oldIds[e.to]});
+story.shots=[];
+var cams=["全景建立镜头，缓推","低机位近景，轻微手持","过肩镜头，焦点在对面人物","特写，浅景深","中近景，横移跟拍","低机位仰拍，慢动作"];
+var created=[];
+beats.forEach(function(bt,i){
+var s={id:uid("nd"),type:"shot",fromStory:story.id,x:story.x+330+(i%3)*300,y:story.y+Math.floor(i/3)*250,
+title:"第 "+(i+1)+" 镜",no:i+1,visual:bt,camera:cams[i%cams.length],dialogue:"",tail:"尾帧构图与下一镜首帧衔接，人物站位不变",lastEditor:DB.session};
+cv.nodes.push(s);created.push(s);story.shots.push(s.id);
+cv.edges.push({id:uid("eg"),from:story.id,to:s.id});
+if(i>0)cv.edges.push({id:uid("eg"),from:created[i-1].id,to:s.id});
+});
+logAct(cv,"一句话拆镜：拆成 "+created.length+" 个 10 秒镜头");
+renderNodes();renderActivity();toast("已拆成 "+created.length+" 个镜头（每镜 10 秒）✓");openPanel("order");
+}
+
+/* ============ 提示词组装 ============ */
+function activeEngine(){var cv=curCanvas();var e=cv.engines.filter(function(x){return x.on});return e[0]||cv.engines[0]}
+function lockText(cn){
+var cv=curCanvas();if(!cv.locks.length)return "";
+if(cn)return "锁定："+cv.locks.map(function(l){return ""+l.desc}).join("；");
+return "Locked: "+cv.locks.map(function(l){return "["+l.name+"] "+(l.descEn||l.desc)}).join("; ");
+}
+function skillText(){
+var cv=curCanvas();var on=cv.skills.filter(function(s){return s.on});
+return on.length?"技能规则："+on.map(function(s){return s.name+"（"+s.desc+"）"}).join("；"):"";
+}
+function buildShotPrompt(shot){
+var cv=curCanvas();var eng=activeEngine();
+var cn="第 "+shot.no+" 镜（10 秒）："+(shot.visual||"")
++"\n运镜："+(shot.camera||"")+(shot.dialogue?"\n对白："+shot.dialogue:"")
++"\n"+lockText(true)+(skillText()?"\n"+skillText():"")
++(cv.kbDigest?"\n知识库精读要点："+cv.kbDigest:"")
++"\n空间站位（原样复用，保持空间感）："+blockDescribe()
++"\n尾帧："+(shot.tail||"");
+var en="Shot "+shot.no+" (10s): "+(shot.visual||"")
++"\nCamera: "+(shot.camera||"")+(shot.dialogue?"\nDialogue: "+shot.dialogue:"")
++"\n"+lockText(false)
++"\nBlocking (reuse verbatim, keep spatial continuity): "+blockDescribeEn()
++(eng&&eng.suffix?"\nMJ params:"+eng.suffix:"");
+return {cn:cn,en:en,negCn:NEG_CN,negEn:NEG_EN};
+}
+function makeShotImage(shot,announce){
+var cv=curCanvas();
+var exist=cv.nodes.filter(function(n){return n.type==="image"&&n.shotId===shot.id})[0];
+var p=buildShotPrompt(shot);
+var refs=["来源：第 "+shot.no+" 镜"];
+cv.locks.forEach(function(l){refs.push("锁定"+l.kind+"「"+l.name+"」")});
+if(cv.block.items.length)refs.push("白模站位");
+if(shot.no>1)refs.push("上一镜尾帧（接力参考）");
+if(exist){exist.promptCn=p.cn;exist.promptEn=p.en;exist.refs=refs;exist.lastEditor=DB.session;renderNodes();if(announce)toast("分镜图节点已同步最新内容");return exist}
+var img={id:uid("nd"),type:"image",shotId:shot.id,shotNo:shot.no,x:shot.x+300,y:shot.y,title:"分镜图 · 第 "+shot.no+" 镜",
+promptCn:p.cn,promptEn:p.en,refs:refs,lastEditor:DB.session};
+cv.nodes.push(img);
+cv.edges.push({id:uid("eg"),from:shot.id,to:img.id});
+cv.locks.forEach(function(l){});
+if(shot.no>1){var prev=cv.nodes.filter(function(n){return n.type==="image"&&n.shotNo===shot.no-1})[0];if(prev)cv.edges.push({id:uid("eg"),from:prev.id,to:img.id})}
+logAct(cv,"新建分镜图节点：第 "+shot.no+" 镜");renderNodes();if(announce)toast("分镜图节点建好了，参考图已自动链接 ✓");
+return img;
+}
+function buildStoryboard(story){
+var shots=shotNodes().filter(function(s){return!story||s.fromStory===story.id});
+if(!shots.length){toast("还没有镜头，先点「一句话拆镜」");if(story)splitStory(story);return}
+shots.forEach(function(s){makeShotImage(s,false)});
+logAct(curCanvas(),"一键分镜头生成："+shots.length+" 张分镜图节点");
+renderNodes();renderActivity();toast("已按 "+shots.length+" 个镜头建好分镜图节点，参考图自动链接 ✓");
+}
+function promptBlockFor(n){
+if(n.type==="shot"){var p=buildShotPrompt(n);return "第 "+n.no+" 镜\n中文提示词：\n"+p.cn+"\nEnglish prompt:\n"+p.en+"\n"+p.negCn+"\n"+p.negEn}
+return "「"+n.title+"」\n中文提示词：\n"+(n.promptCn||"")+"\nEnglish prompt:\n"+(n.promptEn||"")+"\n"+NEG_CN+"\n"+NEG_EN+(n.refs&&n.refs.length?"\n参考图清单 / References: "+n.refs.join("、"):"");
+}
+function genOne(n){
+var cv=curCanvas();var txt=promptBlockFor(n);
+cv.sheet.unshift({id:uid("sh"),title:n.title,body:txt,t:nowStr(),who:DB.session});
+logAct(cv,"单个生成："+n.title+" 已加入请求单");
+copyText(txt,"这一"+(n.type==="video"?"条":"张")+"的双语提示词已复制，并加入请求单 ✓");
+renderSheet();renderActivity();
+}
+$("btnGenAll").onclick=function(){
+var cv=curCanvas();var imgs=cv.nodes.filter(function(n){return n.type==="image"}).sort(function(a,b){return (a.shotNo||99)-(b.shotNo||99)});
+if(!imgs.length){toast("还没有分镜图节点，先拆镜再点「一键分镜头生成」");return}
+var all=imgs.map(function(n){return promptBlockFor(n)}).join("\n\n———\n\n");
+imgs.forEach(function(n){cv.sheet.unshift({id:uid("sh"),title:n.title,body:promptBlockFor(n),t:nowStr(),who:DB.session})});
+logAct(cv,"一键生成全部："+imgs.length+" 张分镜图加入请求单");
+copyText("\n\n"+all,"全部 "+imgs.length+" 张的提示词已复制 ✓");
+renderSheet();renderActivity();
+};
+$("btnCopyFlow").onclick=function(){
+var cv=curCanvas();if(!cv.nodes.length){toast("画布还是空的，先建节点");return}
+var lines=["# 工作流："+cv.name+"（"+cv.nodes.length+" 个节点）","","## 锁定库",lockText(true)||"（无）",lockText(false)||"","",
+"## 技能库",skillText()||"（无点亮技能）","","## 引擎",activeEngine()?activeEngine().name:"（无）"];
+if(cv.kbDigest)lines.push("","## 知识库精读要点",cv.kbDigest);
+lines.push("","## 白模站位",blockDescribe());
+var shots=shotNodes();
+if(shots.length){lines.push("","## 分镜（按顺序）");shots.forEach(function(s){lines.push("",promptBlockFor(s))})}
+var others=cv.nodes.filter(function(n){return n.type!=="shot"&&n.type!=="story"});
+if(others.length){lines.push("","## 其他节点");others.forEach(function(n){lines.push("",promptBlockFor(n))})}
+var story=cv.nodes.filter(function(n){return n.type==="story"})[0];
+if(story)lines.splice(2,0,"## 故事",story.text||"");
+logAct(cv,"一键复制工作流");
+copyText(lines.join("\n"),"整条工作流已复制 ✓ 直接粘贴发送即可");
+renderActivity();
+};
+
+/* ============ 顺序 ============ */
+$("btnOrder").onclick=function(){openPanel("order")};
+function renderOrder(){
+var box=$("orderList");var shots=shotNodes();box.innerHTML=shots.length?"":'<p class="empty">还没有镜头节点</p>';
+shots.forEach(function(s,i){
+var div=document.createElement("div");div.className="card";
+div.innerHTML="<h4>第 "+s.no+" 镜 · "+esc(s.title)+"</h4><p>"+esc((s.visual||"").slice(0,60))+"</p>";
+var row=document.createElement("div");row.className="row";
+var up=document.createElement("button");up.className="btn small";up.textContent="↑ 上移";up.disabled=i===0;
+var dn=document.createElement("button");dn.className="btn small";dn.textContent="↓ 下移";dn.disabled=i===shots.length-1;
+up.onclick=function(){swapShot(i,-1)};dn.onclick=function(){swapShot(i,1)};
+row.appendChild(up);row.appendChild(dn);div.appendChild(row);box.appendChild(div);
+});
+}
+function swapShot(i,dir){
+var cv=curCanvas();var shots=shotNodes();var j=i+dir;if(j<0||j>=shots.length)return;
+var a=shots[i],b=shots[j];var t=a.no;a.no=b.no;b.no=t;var tx=a.x,ty=a.y;a.x=b.x;a.y=b.y;b.x=tx;b.y=ty;
+logAct(cv,"调整镜头顺序");renderNodes();renderOrder();
+}
+
+/* ============ 锁定库 / 技能库 / 引擎库 ============ */
+function renderLocks(){
+var cv=curCanvas();var box=$("lockList");box.innerHTML=cv.locks.length?"":'<p class="empty">锁定库还是空的，在下面加第一个锁定</p>';
+cv.locks.forEach(function(l){
+var div=document.createElement("div");div.className="card";
+div.innerHTML="<h4>🔒 "+esc(l.name)+' <span class="tag">'+esc(l.kind)+"</span></h4><p>"+esc(l.desc)+"</p>"+(l.descEn?'<p style="margin-top:4px">'+esc(l.descEn)+"</p>":"");
+var row=document.createElement("div");row.className="row";
+var del=document.createElement("button");del.className="btn small danger";del.textContent="移除";
+del.onclick=function(){cv.locks=cv.locks.filter(function(x){return x.id!==l.id});logAct(cv,"移除锁定「"+l.name+"」");renderLocks();renderNodes();renderActivity()};
+row.appendChild(del);div.appendChild(row);box.appendChild(div);
+});
+}
+$("btnAddLock").onclick=function(){
+var cv=curCanvas();var name=$("lockName").value.trim();if(!name){toast("先给锁定起个名字");return}
+cv.locks.push({id:uid("lk"),kind:$("lockKind").value,name:name,desc:$("lockDesc").value.trim(),descEn:$("lockDescEn").value.trim()});
+logAct(cv,"新增锁定「"+name+"」，已同步到全部镜头");$("lockName").value="";$("lockDesc").value="";$("lockDescEn").value="";
+renderLocks();renderNodes();renderActivity();toast("锁定已加入，并同步到全部镜头 ✓");
+};
+function renderSkills(){
+var cv=curCanvas();var box=$("skillList");box.innerHTML="";
+cv.skills.forEach(function(s){
+var div=document.createElement("div");div.className="card";
+div.innerHTML="<h4>✦ "+esc(s.name)+' <span class="tag'+(s.on?" on":"")+'">'+(s.on?"已点亮":"未启用")+"</span></h4><p>"+esc(s.desc)+"</p>";
+var row=document.createElement("div");row.className="row";
+var tg=document.createElement("button");tg.className="btn small"+(s.on?"":" gold");tg.textContent=s.on?"关掉":"点亮使用";
+tg.onclick=function(){s.on=!s.on;renderSkills();toast(s.on?"技能「"+s.name+"」已点亮 ✓":"技能已关掉")};
+var del=document.createElement("button");del.className="btn small danger";del.textContent="删除";
+del.onclick=function(){cv.skills=cv.skills.filter(function(x){return x.id!==s.id});renderSkills()};
+row.appendChild(tg);row.appendChild(del);div.appendChild(row);box.appendChild(div);
+});
+}
+$("btnAddSkill").onclick=function(){
+var cv=curCanvas();var name=$("skillName").value.trim();if(!name){toast("先给技能起个名字");return}
+cv.skills.push({id:uid("sk"),name:name,desc:$("skillDesc").value.trim(),on:true});
+$("skillName").value="";$("skillDesc").value="";logAct(cv,"新增技能「"+name+"」");renderSkills();renderActivity();toast("技能已加入并点亮 ✓");
+};
+function renderEngines(){
+var cv=curCanvas();var box=$("engineList");box.innerHTML="";
+cv.engines.forEach(function(e){
+var div=document.createElement("div");div.className="card";
+div.innerHTML="<h4>⚙ "+esc(e.name)+' <span class="tag'+(e.on?" on":"")+'">'+(e.on?"当前引擎":"")+"</span></h4><p>"+esc(e.desc)+(e.suffix?"<br>参数后缀："+esc(e.suffix):"")+"</p>";
+var row=document.createElement("div");row.className="row";
+var use=document.createElement("button");use.className="btn small gold";use.textContent="设为当前引擎";
+use.onclick=function(){cv.engines.forEach(function(x){x.on=false});e.on=true;renderEngines();toast("当前引擎："+e.name+" ✓")};
+row.appendChild(use);div.appendChild(row);box.appendChild(div);
+});
+}
+$("btnAddEngine").onclick=function(){
+var cv=curCanvas();var name=$("engineName").value.trim();if(!name){toast("先给引擎起个名字");return}
+cv.engines.push({id:uid("en"),name:name,desc:$("engineDesc").value.trim(),suffix:"",on:false});
+$("engineName").value="";$("engineDesc").value="";logAct(cv,"新增引擎「"+name+"」");renderEngines();renderActivity();toast("引擎已加入 ✓");
+};
+
+/* ============ 知识库 ============ */
+function renderKb(){
+var cv=curCanvas();var box=$("kbCand");if(box&&!box.dataset.keep)box.innerHTML="";
+var dg=$("kbDigest");if(dg)dg.innerHTML=cv.kbDigest?'<div class="card"><h4>精读要点（会拼进提示词）</h4><p>'+esc(cv.kbDigest)+'</p></div>':"";
+}
+$("btnAddKb").onclick=function(){
+var cv=curCanvas();var t=$("kbTitle").value.trim(),x=$("kbText").value.trim();
+if(!t||!x){toast("资料名和内容都要填");return}
+cv.kb.push({id:uid("kb"),title:t,text:x,confirmed:false});
+$("kbTitle").value="";$("kbText").value="";logAct(cv,"知识库新增资料「"+t+"」");renderActivity();toast("资料已存入知识库 ✓");
+};
+$("btnKbMatch").onclick=function(){
+var cv=curCanvas();var q=$("kbQuery").value.trim();var box=$("kbCand");box.dataset.keep="1";
+if(!cv.kb.length){box.innerHTML='<p class="empty">知识库还是空的，先在上面添加资料</p>';return}
+var scored=cv.kb.map(function(k){
+var score=0;if(q){q.split(/[\s,，、]+/).forEach(function(w){if(w&&(k.title+" "+k.text).indexOf(w)>=0)score++})}
+return {k:k,score:score};
+}).sort(function(a,b){return b.score-a.score});
+box.innerHTML='<p class="kv" style="margin-bottom:8px">匹配到 '+scored.length+' 份候选，勾选你要精读的：</p>';
+scored.forEach(function(s){
+var div=document.createElement("div");div.className="card";
+div.innerHTML="<h4>📄 "+esc(s.k.title)+' <span class="tag">'+(s.score>0?"匹配 "+s.score+" 处":"弱相关")+"</span></h4><p>"+esc(s.k.text.slice(0,90))+"…</p>";
+var row=document.createElement("div");row.className="row";
+var tg=document.createElement("button");tg.className="btn small"+(s.k.confirmed?"":" gold");tg.textContent=s.k.confirmed?"✓ 已确认（点取消）":"确认精读这份";
+tg.onclick=function(){s.k.confirmed=!s.k.confirmed;$("btnKbMatch").click()};
+row.appendChild(tg);div.appendChild(row);box.appendChild(div);
+});
+};
+$("btnKbRead").onclick=function(){
+var cv=curCanvas();var conf=cv.kb.filter(function(k){return k.confirmed});
+if(!conf.length){toast("先在上面匹配并确认至少一份资料");return}
+var points=[];
+conf.forEach(function(k){
+var sents=k.text.split(/(?<=[。！？.!?])/).map(function(s){return s.trim()}).filter(function(s){return s.length>=8});
+sents.slice(0,3).forEach(function(s){points.push("《"+k.title+"》"+s.slice(0,80))});
+});
+cv.kbDigest=points.join("；");
+logAct(cv,"知识库定向精读 "+conf.length+" 份资料，要点已拼入提示词");
+renderKb();$("kbDigest").innerHTML='<div class="card"><h4>精读完成 ✓ 要点已拼入后续提示词</h4><p>'+esc(cv.kbDigest)+"</p></div>";
+renderActivity();toast("精读完成，要点已拼进提示词 ✓");
+};
+
+/* ============ 白模 ============ */
+var BM_COLORS=["#e8cf8f","#9fd3ae","#f0a894","#a8c4e8","#e3a8d8","#f3ecd9"];
+function blockItems(){return curCanvas().block.items}
+function blockDescribe(){
+var cv=curCanvas();if(!cv||!cv.block.items.length)return "（未设置白模站位）";
+var chars=cv.block.items.filter(function(i){return i.kind==="char"});
+var cams=cv.block.items.filter(function(i){return i.kind==="cam"});
+var parts=chars.map(function(c,i){return c.name+" 位于画面"+posWord(c.x,c.y)+"，朝向 "+c.ang+"°"});
+if(chars.length>=2)parts.push("两人相距约 "+distM(chars[0],chars[1])+" 米对峙，左右站位全程不变");
+cams.forEach(function(c){parts.push("摄像机在"+posWord(c.x,c.y)+"，焦距 "+c.focal+"mm，朝向 "+c.ang+"° 拍摄")});
+return parts.join("；")+"。空间纵深与遮挡关系按此站位保持一致。";
+}
+function blockDescribeEn(){
+var cv=curCanvas();if(!cv||!cv.block.items.length)return "(no blocking set)";
+return cv.block.items.map(function(i){return (i.kind==="cam"?"Camera":"Character "+i.name)+" at ("+Math.round(i.x)+"%, "+Math.round(i.y)+"%), facing "+i.ang+"°"+(i.kind==="cam"?", "+i.focal+"mm lens":"")}).join("; ")+". Keep this spatial layout consistent.";
+}
+function posWord(x,y){var h=x<38?"左":(x>62?"右":"中");var v=y<38?"上":(y>62?"下":"中");return v+h+"区域"}
+function distM(a,b){return (Math.hypot(a.x-b.x,a.y-b.y)/12).toFixed(1)}
+function renderBlock(){
+var cv=curCanvas();var layer=$("bmLayer");layer.innerHTML="";
+cv.block.items.forEach(function(it){
+var el=document.createElement("div");el.className="bm"+(it.kind==="cam"?" cam":"")+(cv.block.sel===it.id?" sel":"");
+el.style.left=it.x+"%";el.style.top=it.y+"%";el.style.background=it.kind==="cam"?"":(it.color||"#e8cf8f");
+el.textContent=it.kind==="cam"?"📷":it.name.slice(0,2);
+el.title=it.name+" · 朝向 "+it.ang+"°";
+el.addEventListener("pointerdown",function(e){e.stopPropagation();cv.block.sel=it.id;drag={mode:"bm",item:it,layer:$("blockTop")};syncBmControls();renderBlock()});
+layer.appendChild(el);
+});
+$("blockPrev").textContent=cv.block.items.length?("构图预览："+blockDescribe()):"在俯视图里摆好人物和摄像机，这里会给出构图与站位说明。";
+syncBmControls();
+}
+function syncBmControls(){
+var cv=curCanvas();var it=cv.block.items.filter(function(i){return i.id===cv.block.sel})[0];
+$("bmSelName").textContent=it?it.name+"（"+(it.kind==="cam"?"摄像机":"人物")+"）":"无";
+if(it){$("bmAng").value=it.ang;$("bmAngVal").textContent=it.ang+"°";$("bmFocal").value=it.focal||50;$("bmFocalVal").textContent=(it.focal||50)+"mm"}
+}
+function bmMove(e){
+if(!drag||drag.mode!=="bm")return;var r=$("blockTop").getBoundingClientRect();
+drag.item.x=Math.min(96,Math.max(4,(e.clientX-r.left)/r.width*100));
+drag.item.y=Math.min(94,Math.max(6,(e.clientY-r.top)/r.height*100));
+renderBlock();
+}
+$("bmAddChar").onclick=function(){
+var cv=curCanvas();var n=cv.block.items.filter(function(i){return i.kind==="char"}).length;
+var names=["黑衣男","蓝衣男","人物C","人物D"];var it={id:uid("bm"),kind:"char",name:names[n%names.length],x:30+n*18,y:55,ang:90,focal:50,color:BM_COLORS[n%BM_COLORS.length]};
+cv.block.items.push(it);cv.block.sel=it.id;logAct(cv,"白模新增人物 "+it.name);renderBlock();
+};
+$("bmAddCam").onclick=function(){
+var cv=curCanvas();var it={id:uid("bm"),kind:"cam",name:"摄像机",x:50,y:88,ang:270,focal:50};
+cv.block.items.push(it);cv.block.sel=it.id;logAct(cv,"白模新增摄像机");renderBlock();
+};
+$("bmDel").onclick=function(){
+var cv=curCanvas();if(!cv.block.sel){toast("先点选一个对象");return}
+cv.block.items=cv.block.items.filter(function(i){return i.id!==cv.block.sel});cv.block.sel=null;renderBlock();
+};
+$("bmAng").oninput=function(){var cv=curCanvas();var it=cv.block.items.filter(function(i){return i.id===cv.block.sel})[0];if(it){it.ang=parseInt(this.value,10);$("bmAngVal").textContent=it.ang+"°";renderBlock()}};
+$("bmFocal").oninput=function(){var cv=curCanvas();var it=cv.block.items.filter(function(i){return i.id===cv.block.sel})[0];if(it){it.focal=parseInt(this.value,10);$("bmFocalVal").textContent=it.focal+"mm";renderBlock()}};
+$("bmToNode").onclick=function(){
+var cv=curCanvas();if(!cv.block.items.length){toast("先在俯视图里摆人物和摄像机");return}
+var n={id:uid("nd"),type:"block",x:200,y:420,title:"白模站位",text:blockDescribe(),lastEditor:DB.session};
+cv.nodes.push(n);logAct(cv,"白模站位已写成节点放上画布");renderNodes();renderActivity();closePanels();toast("白模节点已放上画布 ✓");
+};
+
+/* ============ 请求单 / 动态 ============ */
+function renderSheet(){
+var cv=curCanvas();var box=$("sheetList");if(!box)return;
+box.innerHTML=cv.sheet.length?"":'<p class="empty">请求单还是空的。点任意图片/视频节点的「▶ 生成」就会进来。</p>';
+cv.sheet.forEach(function(s){
+var div=document.createElement("div");div.className="card";
+div.innerHTML="<h4>"+esc(s.title)+'</h4><p class="kv">'+esc(s.t)+" · "+esc(s.who)+'</p><p style="white-space:pre-wrap;margin-top:6px">'+esc(s.body.slice(0,300))+(s.body.length>300?"…":"")+"</p>";
+var row=document.createElement("div");row.className="row";
+var cp=document.createElement("button");cp.className="btn small gold";cp.textContent="复制这一条";
+cp.onclick=function(){copyText(s.body,"已复制 ✓")};
+row.appendChild(cp);div.appendChild(row);box.appendChild(div);
+});
+}
+$("btnCopySheet").onclick=function(){
+var cv=curCanvas();if(!cv.sheet.length){toast("请求单还是空的");return}
+copyText(cv.sheet.map(function(s){return s.body}).join("\n\n———\n\n"),"整张请求单已复制 ✓");
+};
+$("btnClearSheet").onclick=function(){curCanvas().sheet=[];renderSheet();toast("请求单已清空")};
+function renderActivity(){
+var cv=curCanvas();var box=$("activityList");if(!box)return;
+box.innerHTML=cv.activity.length?"":'<p class="empty">还没有操作记录</p>';
+cv.activity.forEach(function(a){
+var div=document.createElement("div");div.className="card";
+div.innerHTML='<p><b style="color:var(--gold-2)">'+esc(a.who||"我")+"</b> · "+esc(a.t)+"</p><p>"+esc(a.text)+"</p>";
+box.appendChild(div);
+});
+}
+
+/* ============ 小飞 ============ */
+var FEI_QUICK=["新建画布","账号和协作","锁定库怎么用","技能库怎么用","引擎库和 MJ","一句话拆镜","白模怎么摆","一键分镜头生成","单个生成 / 一键生成全部","一键复制工作流","知识库精读","检查清单"];
+function feiSay(text){var cv=curCanvas();if(!cv)return;cv.fei.push({role:"bot",text:text});renderFei()}
+function renderFei(){
+var cv=curCanvas();var box=$("feiMsgs");if(!cv||!box)return;box.innerHTML="";
+cv.fei.forEach(function(m){var d=document.createElement("div");d.className="msg "+(m.role==="me"?"me":"bot");d.textContent=m.text;box.appendChild(d)});
+box.scrollTop=box.scrollHeight;
+}
+function feiAnswer(q){
+var cv=curCanvas();var shots=shotNodes().length;var imgs=cv.nodes.filter(function(n){return n.type==="image"}).length;
+var ctx="你现在在画布「"+cv.name+"」，共 "+cv.nodes.length+" 个节点、"+shots+" 个镜头、"+imgs+" 张分镜图。";
+var t=q.toLowerCase();
+function has(){for(var i=0;i<arguments.length;i++)if(t.indexOf(arguments[i])>=0)return true;return false}
+if(has("新建画布","多画布","切换画布"))return ctx+"\n新建画布：点顶栏「＋ 新建画布」，起名字，选个人画布或共享画布。切换：顶栏下拉列表直接换。画布列表（左侧 🗂）能看每块画布的节点数和最后修改时间，也能重命名、删除。";
+if(has("账号","登录","注册","协作","朋友","共享"))return "账号：打开页面先注册/登录，每个账号的个人画布互相分开、别人打不开。共享画布选「共享协作画布」创建，节点卡上会标注 ✎ 谁最近修改，左侧 🕘 动态里能看到谁改了什么。退出在顶栏右上角。";
+if(has("锁定"))return "锁定库（左侧 🔒）：把人物、场景、替身的外观写成锁定，中文+英文各一份。加一次就同步到全部镜头，之后换人/换场景只改锁定，所有镜头一起换，角色不会漂移。现在锁定库里有 "+cv.locks.length+" 条。";
+if(has("技能"))return "技能库（左侧 ✦）：点亮的技能规则会自动拼进拆镜和提示词。比如「一句话拆镜」「AI 高燃打斗」「电影感打斗图（MJ）」等。也可以在技能库底部自己加新技能，加完默认点亮。";
+if(has("引擎","mj","midjourney"))return "引擎库（左侧 ⚙）：当前引擎是「"+(activeEngine()?activeEngine().name:"无")+"」。Muse 视频是站内主引擎；Midjourney v7 是外部手动引擎，英文提示词会自动带 --style raw --v 7 --ar 16:9，你复制去 MJ 手动出图。Seedance、Minimax 也在库里，可切换。";
+if(has("拆镜","一句话"))return "一句话拆镜三步：\n1. 底部点「＋ 故事」，写一句话故事，保存。\n2. 点故事节点上的「✂ 一句话拆镜」，选镜头数，每镜固定 10 秒，镜头节点自动连好线。\n3. 点任意镜头节点可改画面、运镜、对白；对白超过约 28 字我会提醒你拆短。\n你现在有 "+shots+" 个镜头。";
+if(has("白模","站位","摄像机"))return "白模（左侧 🧊）：俯视图里拖人物圆点和摄像机定站位，点选对象后用滑杆调朝向角度和焦距（16–135mm），下方有构图预览。摆好点「把站位写成白模节点放上画布」，站位说明会原样拼进每镜提示词，空间感和左右站位不会漂。";
+if(has("分镜头生成","分镜图"))return "一键分镜头生成：先拆好镜，再点故事节点上的「🖼 一键分镜头生成」。有多少个镜头就建多少个分镜图节点，每个自动链接：来源镜头、全部锁定、白模站位，第 2 镜起还自动链接上一镜尾帧做接力。重复点不会重复建，只同步最新内容。你现在有 "+imgs+" 张分镜图。";
+if(has("一键生成全部","全部生成"))return "一键生成全部：点顶栏「🖼 一键生成全部」，所有分镜图的双语提示词+双语否定会按镜号进请求单并整单复制，你粘贴发回生成渠道即可。单个生成：点某张分镜图上的「▶ 生成这一张」，只复制那一张。";
+if(has("单个生成"))return "单个生成：点任意图片/视频节点上的「▶ 生成这一张」，这一张的中文提示词、英文提示词、双语否定和参考图清单会直接复制，并存进左侧 📋 请求单。";
+if(has("复制工作流","复制"))return "一键复制工作流：点顶栏金色「⚡ 一键复制工作流」，整条工作流一次复制：故事、锁定库、技能库、引擎、白模站位，再按顺序逐镜的双语提示词+双语否定+运镜/对白/尾帧。就在画布里点，不用导出、不用跳页。";
+if(has("知识库","精读","资料"))return "本地知识库（左侧 📚）：先把剧本、设定粘进知识库 → 输入主题点「匹配候选」→ 勾选确认要用的资料 → 点「定向精读已确认资料」。精读要点会自动拼进之后的提示词，先查你的资料再出词，不凭空编。"+(cv.kbDigest?"当前已有精读要点在生效。":"当前还没有精读要点。");
+if(has("检查","清单","流程"))return "完整流程检查清单：\n1. 故事节点写好一句话 ✓\n2. 锁定库人物/场景已锁定（现在 "+cv.locks.length+" 条）\n3. 需要的技能已点亮\n4. 引擎已选对（现在："+(activeEngine()?activeEngine().name:"无")+"）\n5. 知识库已精读（如有资料）\n6. 白模站位已摆好\n7. 已拆镜："+shots+" 镜\n8. 已建分镜图："+imgs+" 张\n9. 用单个生成或一键生成全部出请求单\n10. 一键复制工作流留档";
+if(has("连线","平移","缩放","拖"))return "画布操作：拖空白处平移；滚轮或双指缩放（右下角也有 ＋/− 和复位）；拖节点改位置；连线：点一个节点的金色圆点，再点另一个节点的圆点。删连线在节点编辑面板底部。";
+if(has("你好","hi","在吗"))return "你好，我是小飞 👋 "+ctx+"想做什么直接问我，比如「怎么一键生成分镜图」「白模怎么摆」。";
+return ctx+"\n这个问题我按功能给你最接近的答案：所有操作都在画布里完成，不用跳出去。你可以问我：新建画布、锁定库、技能库、引擎库、一句话拆镜、白模站位、一键分镜头生成、单个/全部生成、一键复制工作流、知识库精读、检查清单。点上方快捷标签也行。";
+}
+function feiSend(){
+var inp=$("feiText");var q=inp.value.trim();if(!q)return;var cv=curCanvas();
+cv.fei.push({role:"me",text:q});inp.value="";renderFei();
+setTimeout(function(){feiSay(feiAnswer(q))},260);
+}
+$("feiSend").onclick=feiSend;
+$("feiText").addEventListener("keydown",function(e){if(e.key==="Enter")feiSend()});
+function openFei(){closePanels();$("feiPanel").classList.add("open");renderFei();setTimeout(function(){$("feiText").focus()},80)}
+$("feiTab").onclick=openFei;$("btnFeiTop").onclick=openFei;$("feiClose").onclick=function(){$("feiPanel").classList.remove("open")};
+(function(){var box=$("feiQuick");FEI_QUICK.forEach(function(q){var b=document.createElement("button");b.type="button";b.textContent=q;b.onclick=function(){var cv=curCanvas();cv.fei.push({role:"me",text:q});renderFei();setTimeout(function(){feiSay(feiAnswer(q))},200)};box.appendChild(b)})})();
+
+/* ============ 总渲染 ============ */
+function renderAll(){applyView();renderNodes();renderCanvasList()}
+setAuthMode("login");
+</script>
+</body>
+</html>
